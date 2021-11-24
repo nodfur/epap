@@ -94,16 +94,15 @@ fn gpioHigh(pin: u8) void {
     gpioWriteBit(pin, c.HIGH);
 }
 
-fn epdWriteCommand(command: u16) void {
-    epdReadBusy();
+fn csLow() void {
     gpioLow(epdCsPin);
-    spiWriteWord(0x6000);
-    epdReadBusy();
-    spiWriteWord(command);
+}
+
+fn csHigh() void {
     gpioHigh(epdCsPin);
 }
 
-fn epdReadBusy() void {
+fn wait() void {
     while (true) {
         if (gpioReadBit(epdBusyPin) == 1) {
             return;
@@ -111,24 +110,40 @@ fn epdReadBusy() void {
     }
 }
 
+const PacketType = enum(u16) {
+    command = 0x6000,
+    write = 0x0000,
+    read = 0x1000,
+};
+
+fn epdStartPacket(kind: PacketType) void {
+    wait();
+    csLow();
+    spiWriteWord(@enumToInt(kind));
+    wait();
+}
+
+fn epdWriteCommand(command: u16) void {
+    epdStartPacket(PacketType.command);
+    defer csHigh();
+
+    spiWriteWord(command);
+}
+
 fn epdWriteData(data: u16) void {
-    epdReadBusy();
-    gpioLow(epdCsPin);
-    spiWriteWord(0x0000);
-    epdReadBusy();
+    epdStartPacket(PacketType.write);
+    defer csHigh();
+
     spiWriteWord(data);
-    gpioHigh(epdCsPin);
 }
 
 fn epdWriteMultiData(data: []u16) void {
-    epdReadBusy();
-    gpioLow(epdCsPin);
-    spiWriteWord(0x0000);
-    epdReadBusy();
+    epdStartPacket(PacketType.write);
+    defer csHigh();
+
     for (data) |x| {
         spiWriteWord(data);
     }
-    gpioHigh(epdCsPin);
 }
 
 fn spiReadByte() u8 {
@@ -141,18 +156,62 @@ fn spiReadWord() u16 {
     return @as(u16, hi << 8) | @as(u16, lo);
 }
 
-fn epdReadData() u16 {
-    epdReadBusy();
-    gpioLow(epdCsPin);
-    spiWriteWord(0x1000);
-    epdReadBusy();
+fn spiReadU32() u32 {
+    // this is kinda backwards...
+    var lo: u16 = spiReadWord();
+    var hi: u16 = spiReadWord();
+    return @as(u32, hi << 16) | @as(u32, lo);
+}
 
-    _ = spiReadWord();
-    epdReadBusy();
+fn spiReadBytes(comptime n: usize) [n]u8 {
+    var buffer: [n]u8 = [0]**n;
+    for (buffer) |_, i| {
+        buffer[i] = spiReadByte();
+    }
+    return buffer;
+}
 
-    var data: u16 = spiReadWord();
+fn epdReadWord() u16 {
+    epdStartReading();
+    defer csHigh();
 
-    gpioHigh(epdCsPin);
+    return spiReadWord();
+}
 
-    return data;
+fn epdStartReading() void {
+    epdStartPacket(PacketType.read);
+
+    _ = spiReadWord(); // read a dummy word
+
+    wait();
+}
+
+fn epdReadWords(slice: []u16) void {
+    epdStartReading();
+    defer csHigh();
+
+    for (slice) |_, i| {
+        slice[i] = spiReadWord();
+    }
+}
+
+const SystemInfo = struct {
+    panelWidth: u16,
+    panelHeight: u16,
+    memoryAddress: u32,
+    fwVersion: [16]u8,
+    lutVersion: [16]u8,
+};
+
+fn epdGetSystemInfo() SystemInfo {
+    epdStartReading();
+    defer csHigh();
+
+    return SystemInfo{
+        .panelWidth = spiReadWord(),
+        .panelHeight = spiReadWord(),
+        .memoryAddress = spiReadU32(),
+        .fwVersion = spiReadBytes(16),
+        .lutVersion = spiReadBytes(16),
+    };
 }

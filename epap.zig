@@ -10,15 +10,23 @@ pub fn main() !void {
     try stdout.print("Hello, {s}!\n", .{"world"});
 
     try init();
+    defer {
+        exit() catch |err| std.log.err("BCM2835 exit failed", .{});
+    }
+
+    try epdInit(-1.73);
+    try epdSleep();
 }
 
 fn init() !void {
+    std.log.info("starting BCM2835", .{});
+
     if (c.bcm2835_init() == 0) {
-        return error.BCM2835_InitFailed;
+        return error.bcm2835_init_failed;
     }
 
     if (c.bcm2835_spi_begin() == 0) {
-        return error.BCM2835_SPI_Failed;
+        return error.bcm2835_spi_failed;
     }
 
     c.bcm2835_spi_setBitOrder(c.BCM2835_SPI_BIT_ORDER_MSBFIRST);
@@ -28,12 +36,17 @@ fn init() !void {
     gpioInit();
 }
 
-fn exit() void {
+fn exit() !void {
+    std.log.info("closing BCM2835", .{});
+
     gpioWriteBit(epdCsPin, c.LOW);
     gpioWriteBit(epdRstPin, c.LOW);
 
     c.bcm2835_spi_end();
-    c.bcm2835_close();
+
+    if (c.bcm2835_close() == 0) {
+        return error.bcm2835_exit_failed;
+    }
 }
 
 fn gpioMode(pin: u8, mode: u16) void {
@@ -45,6 +58,7 @@ fn gpioMode(pin: u8, mode: u16) void {
 }
 
 fn gpioInit() void {
+    std.log.info("starting GPIO", .{});
     gpioMode(epdRstPin, c.BCM2835_GPIO_FSEL_OUTP);
     gpioMode(epdCsPin, c.BCM2835_GPIO_FSEL_OUTP);
     gpioMode(epdBusyPin, c.BCM2835_GPIO_FSEL_INPT);
@@ -69,6 +83,7 @@ fn delayUs(us: u64) void {
 }
 
 fn epdReset() void {
+    std.log.info("resetting EPD", .{});
     gpioWriteBit(epdRstPin, c.HIGH);
     delayMs(200);
     gpioWriteBit(epdRstPin, c.LOW);
@@ -78,10 +93,10 @@ fn epdReset() void {
 }
 
 fn spiWriteByte(byte: u8) void {
-    c.bcm2835_spi_transfer(byte);
+    _ = c.bcm2835_spi_transfer(byte);
 }
 
-fn spiWriteWord(word: u16) void {
+fn spiWriteWord(word: u16) !void {
     spiWriteByte(@truncate(u8, word >> 8));
     spiWriteByte(@truncate(u8, word));
 }
@@ -116,25 +131,25 @@ const PacketType = enum(u16) {
     read = 0x1000,
 };
 
-fn epdStartPacket(kind: PacketType) void {
+fn epdStartPacket(kind: PacketType) !void {
     wait();
     csLow();
-    spiWriteWord(@enumToInt(kind));
+    try spiWriteWord(@enumToInt(kind));
     wait();
 }
 
-fn epdWriteCommand(command: Commands) void {
-    epdStartPacket(PacketType.command);
+fn epdWriteCommand(command: Commands) !void {
+    try epdStartPacket(PacketType.command);
     defer csHigh();
 
-    spiWriteWord(@enumToInt(command));
+    try spiWriteWord(@enumToInt(command));
 }
 
-fn epdWriteU16(data: u16) void {
-    epdStartPacket(PacketType.write);
+fn epdWriteU16(data: u16) !void {
+    try epdStartPacket(PacketType.write);
     defer csHigh();
 
-    spiWriteWord(data);
+    try spiWriteWord(data);
 }
 
 fn epdWriteMultiData(data: []u16) void {
@@ -153,18 +168,18 @@ fn spiReadByte() u8 {
 fn spiReadWord() u16 {
     var hi: u8 = spiReadByte();
     var lo: u8 = spiReadByte();
-    return @as(u16, hi << 8) | @as(u16, lo);
+    return (@as(u16, hi) << 8) | @as(u16, lo);
 }
 
 fn spiReadU32() u32 {
     // this is kinda backwards...
     var lo: u16 = spiReadWord();
     var hi: u16 = spiReadWord();
-    return @as(u32, hi << 16) | @as(u32, lo);
+    return (@as(u32, hi) << 16) | @as(u32, lo);
 }
 
 fn spiReadBytes(comptime n: usize) [n]u8 {
-    var buffer: [n]u8 = [0]**n;
+    var buffer = [_]u8{0} ** n;
     for (buffer) |_, i| {
         buffer[i] = spiReadByte();
     }
@@ -178,8 +193,8 @@ fn epdReadWord() u16 {
     return spiReadWord();
 }
 
-fn epdStartReading() void {
-    epdStartPacket(PacketType.read);
+fn epdStartReading() !void {
+    try epdStartPacket(PacketType.read);
 
     _ = spiReadWord(); // read a dummy word
 
@@ -203,8 +218,9 @@ const SystemInfo = struct {
     lutVersion: [16]u8,
 };
 
-fn epdGetSystemInfo() SystemInfo {
-    epdStartReading();
+fn epdGetSystemInfo() !SystemInfo {
+    std.log.info("reading EPD system info", .{});
+    try epdStartReading();
     defer csHigh();
 
     return SystemInfo{
@@ -220,20 +236,21 @@ const Commands = enum(u16) {
     run = 0x1,
     standby = 0x2,
     sleep = 0x03,
+    write_register = 0x11,
+    vcom = 0x39,
 };
 
 const Registers = enum(u16) {
     i80cpcr = 0x04,
 };
 
-fn epdInit(vcom: f64) void {
-    std.log.info("resetting");
+fn epdInit(vcom: f64) !void {
     epdReset();
-    std.log.info("starting");
-    epdWriteCommand(Commands.run);
 
-    std.log.info("getting system info");
-    var info = epdGetSystemInfo();
+    std.log.info("starting EPD", .{});
+    try epdWriteCommand(Commands.run);
+
+    var info = try epdGetSystemInfo();
 
     std.log.info("panel width: {d}", .{info.panelWidth});
     std.log.info("panel height: {d}", .{info.panelHeight});
@@ -242,30 +259,30 @@ fn epdInit(vcom: f64) void {
     std.log.info("LUT version: {s}", .{info.lutVersion});
 
     // enable pack write
-    std.log.info("enabling pack write");
-    epdWriteRegister(Registers.i80cpcr, 1);
+    std.log.info("enabling pack write", .{});
+    try epdWriteRegister(Registers.i80cpcr, 1);
 
-    std.log.info("setting vcom to {f}", vcom);
-    epdSetVcom(vcom);
-
-    std.log.info("going to sleep");
-    epdWriteCommand(Commands.sleep);
-
-    std.log.info("exiting BCM2835");
-    exit();
+    try epdSetVcom(vcom);
 }
 
-fn epdSetVcom(vcom: f64) void {
+fn epdSleep() !void {
+    std.log.info("going to sleep", .{});
+    try epdWriteCommand(Commands.sleep);
+}
+
+fn epdSetVcom(vcom: f64) !void {
+    std.log.info("setting vcom to {d}", .{vcom});
+
     var vcom_word: u16 =
-        @truncate(u16, @bitCast(u32, @fabs(vcom) * 1000.0));
+        @truncate(u16, @bitCast(u64, @fabs(vcom) * 1000.0));
 
-    epdWriteCommand(Commands.setVcom);
-    epdWriteU16(1);
-    epdWriteU16(vcom_word);
+    try epdWriteCommand(Commands.vcom);
+    try epdWriteU16(1);
+    try epdWriteU16(vcom_word);
 }
 
-fn epdWriteRegister(r: Registers, value: u16) void {
-    epdWriteCommand(Commands.write_register);
-    epdWriteU16(@enumToInt(r));
-    epdWriteU16(value);
+fn epdWriteRegister(r: Registers, value: u16) !void {
+    try epdWriteCommand(Commands.write_register);
+    try epdWriteU16(@enumToInt(r));
+    try epdWriteU16(value);
 }

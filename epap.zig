@@ -1,6 +1,8 @@
 const c = @cImport(@cInclude("bcm2835.h"));
 const std = @import("std");
 
+const allocator = std.heap.c_allocator;
+
 const epdRstPin: u8 = 17;
 const epdCsPin: u8 = 8;
 const epdBusyPin: u8 = 24;
@@ -289,4 +291,38 @@ fn epdWriteRegister(r: Registers, value: u16) !void {
     try epdWriteCommand(Commands.write_register);
     try epdWriteU16(@enumToInt(r));
     try epdWriteU16(value);
+}
+
+fn epdReadRegister(r: Registers) !u16 {
+    try epdWriteCommand(Commands.read_register);
+    try epdWriteU16(@enumToInt(r));
+    return epdReadWord();
+}
+
+fn epdWaitForDisplay() !void {
+    while (true) {
+        if (try epdReadRegister(Registers.lutafsr) == 0) {
+            return;
+        }
+    }
+}
+
+fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {
+    try epdWaitForDisplay();
+
+    var hmm: bool = info.panelWidth * 4 % 8 == 0;
+
+    var width =
+        if (hmm) info.panelWidth * 4 / 8
+        else info.panelWidth * 4 / 8 + 1;
+
+    var size =
+        width * info.panelHeight;
+
+    var frame: []u8 = try allocator.alloc(u8, size);
+    defer allocator.free(frame);
+
+    std.mem.set(u8, frame, byte);
+
+    // epdWrite4BP(frame, info.memoryAddress, 0, 0, info.panelWidth, info.panelHeight, mode);
 }

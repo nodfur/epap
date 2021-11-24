@@ -123,14 +123,14 @@ fn epdStartPacket(kind: PacketType) void {
     wait();
 }
 
-fn epdWriteCommand(command: u16) void {
+fn epdWriteCommand(command: Commands) void {
     epdStartPacket(PacketType.command);
     defer csHigh();
 
-    spiWriteWord(command);
+    spiWriteWord(@enumToInt(command));
 }
 
-fn epdWriteData(data: u16) void {
+fn epdWriteU16(data: u16) void {
     epdStartPacket(PacketType.write);
     defer csHigh();
 
@@ -214,4 +214,58 @@ fn epdGetSystemInfo() SystemInfo {
         .fwVersion = spiReadBytes(16),
         .lutVersion = spiReadBytes(16),
     };
+}
+
+const Commands = enum(u16) {
+    run = 0x1,
+    standby = 0x2,
+    sleep = 0x03,
+};
+
+const Registers = enum(u16) {
+    i80cpcr = 0x04,
+};
+
+fn epdInit(vcom: f64) void {
+    std.log.info("resetting");
+    epdReset();
+    std.log.info("starting");
+    epdWriteCommand(Commands.run);
+
+    std.log.info("getting system info");
+    var info = epdGetSystemInfo();
+
+    std.log.info("panel width: {d}", .{info.panelWidth});
+    std.log.info("panel height: {d}", .{info.panelHeight});
+    std.log.info("memory address: 0x{x}", .{info.panelHeight});
+    std.log.info("firmware version: {s}", .{info.fwVersion});
+    std.log.info("LUT version: {s}", .{info.lutVersion});
+
+    // enable pack write
+    std.log.info("enabling pack write");
+    epdWriteRegister(Registers.i80cpcr, 1);
+
+    std.log.info("setting vcom to {f}", vcom);
+    epdSetVcom(vcom);
+
+    std.log.info("going to sleep");
+    epdWriteCommand(Commands.sleep);
+
+    std.log.info("exiting BCM2835");
+    exit();
+}
+
+fn epdSetVcom(vcom: f64) void {
+    var vcom_word: u16 =
+        @truncate(u16, @bitCast(u32, @fabs(vcom) * 1000.0));
+
+    epdWriteCommand(Commands.setVcom);
+    epdWriteU16(1);
+    epdWriteU16(vcom_word);
+}
+
+fn epdWriteRegister(r: Registers, value: u16) void {
+    epdWriteCommand(Commands.write_register);
+    epdWriteU16(@enumToInt(r));
+    epdWriteU16(value);
 }

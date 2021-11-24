@@ -13,7 +13,14 @@ pub fn main() !void {
         exit() catch |err| std.log.err("BCM2835 exit failed", .{});
     }
 
-    try epdInit(-1.73);
+    var info = try epdInit(-1.73);
+
+    try epdClear(info, 0xff, 0);
+    delayMs(1000);
+    try epdClear(info, 0x00, 0);
+    delayMs(1000);
+    try epdClear(info, 0xff, 0);
+
     try epdSleep();
 }
 
@@ -151,12 +158,12 @@ fn epdWriteU16(data: u16) !void {
     try spiWriteWord(data);
 }
 
-fn epdWriteMultiData(data: []u16) void {
-    epdStartPacket(PacketType.write);
+fn epdWriteMultiData(data: []u16) !void {
+    try epdStartPacket(PacketType.write);
     defer csHigh();
 
     for (data) |x| {
-        spiWriteWord(data);
+        try spiWriteWord(x);
     }
 }
 
@@ -189,8 +196,8 @@ fn spiReadBytes(comptime n: usize) [n]u8 {
     return buffer;
 }
 
-fn epdReadWord() u16 {
-    epdStartReading();
+fn epdReadWord() !u16 {
+    try epdStartReading();
     defer csHigh();
 
     return spiReadWord();
@@ -241,16 +248,26 @@ const Commands = enum(u16) {
     run = 0x1,
     standby = 0x2,
     sleep = 0x03,
+    read_register = 0x10,
     write_register = 0x11,
     vcom = 0x39,
     dev_info = 0x302,
+    load_img_area_start = 0x21,
+    load_img_end = 0x22,
+    display_area = 0x34,
 };
+
+const mcsr_base_address: u16 = 0x200;
+const display_reg_base: u16 = 0x1000;
 
 const Registers = enum(u16) {
     i80cpcr = 0x04,
+    lisar0 = mcsr_base_address + 0x8,
+    lisar2 = mcsr_base_address + 0x8 + 2,
+    lutafsr = display_reg_base + 0x224,
 };
 
-fn epdInit(vcom: f64) !void {
+fn epdInit(vcom: f64) !SystemInfo {
     epdReset();
 
     std.log.info("starting EPD", .{});
@@ -269,6 +286,8 @@ fn epdInit(vcom: f64) !void {
     try epdWriteRegister(Registers.i80cpcr, 1);
 
     try epdSetVcom(vcom);
+
+    return info;
 }
 
 fn epdSleep() !void {
@@ -301,7 +320,7 @@ fn epdReadRegister(r: Registers) !u16 {
 
 fn epdWaitForDisplay() !void {
     while (true) {
-        if (try epdReadRegister(Registers.lutafsr) == 0) {
+        if ((try epdReadRegister(Registers.lutafsr)) == 0) {
             return;
         }
     }
@@ -313,8 +332,7 @@ fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {
     var hmm: bool = info.panelWidth * 4 % 8 == 0;
 
     var width =
-        if (hmm) info.panelWidth * 4 / 8
-        else info.panelWidth * 4 / 8 + 1;
+        if (hmm) info.panelWidth * 4 / 8 else info.panelWidth * 4 / 8 + 1;
 
     var size =
         width * info.panelHeight;
@@ -324,5 +342,99 @@ fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {
 
     std.mem.set(u8, frame, byte);
 
-    // epdWrite4BP(frame, info.memoryAddress, 0, 0, info.panelWidth, info.panelHeight, mode);
+    try epdWrite4BP(frame, info.memoryAddress, 0, 0, info.panelWidth, info.panelHeight, mode);
+    try epdDisplayArea(Rectangle{
+        .x = 0,
+        .y = 0,
+        .w = info.panelWidth,
+        .h = info.panelHeight,
+    }, mode);
+}
+
+const Endianness = enum(u1) {
+    little = 0,
+    big = 1,
+};
+
+const PixelFormat = enum(u2) {
+    bpp2 = 0,
+    bpp3 = 1,
+    bpp4 = 2,
+    bpp8 = 3,
+};
+
+const Rotation = enum(u2) {
+    normal = 0,
+    rotate_90 = 1,
+    rotate_180 = 2,
+    rotate_270 = 3,
+};
+
+const LoadImgInfo = struct {
+    endianness: Endianness,
+    pixel_format: PixelFormat,
+    rotation: Rotation,
+};
+
+const Rectangle = struct {
+    x: u16,
+    y: u16,
+    w: u16,
+    h: u16,
+};
+
+fn epdWrite4BP(data: []u8, address: u32, x: u16, y: u16, width: u16, height: u16, mode: u8) !void {
+    std.log.info("writing 4bp", .{});
+
+    var info = LoadImgInfo{
+        .endianness = Endianness.little,
+        .pixel_format = PixelFormat.bpp4,
+        .rotation = Rotation.normal,
+    };
+
+    try epdSetTargetAddress(address);
+
+    var length = ((width * 4 / 8) / 2) * height;
+    var i: usize = 0;
+    while (i * 2 < length) {
+        try epdWriteU16(@as(u16, data[i * 2 + 0]) | (@as(u16, data[i * 2 + 1]) << 8));
+    }
+
+    try epdWriteCommand(Commands.load_img_end);
+}
+
+fn epdSetTargetAddress(address: u32) !void {
+    var addressHigh: u16 = @truncate(u16, address >> 16);
+    var addressLow: u16 = @truncate(u16, address & 0xFFFF);
+    try epdWriteRegister(Registers.lisar2, addressHigh);
+    try epdWriteRegister(Registers.lisar0, addressLow);
+}
+
+fn epdLoadImgAreaStart(info: LoadImgInfo, rect: Rectangle) !void {
+    var format: u16 =
+        (@enumToInt(info.endianness) << 8) | (@enumToInt(info.pixel_format) << 4) | (@enumToInt(info.rotation));
+
+    var args = [_]u16{
+        format,
+        rect.x,
+        rect.y,
+        rect.w,
+        rect.h,
+    };
+
+    try epdWriteCommand(Commands.load_img_area_start);
+    try epdWriteMultiData(&args);
+}
+
+fn epdDisplayArea(rect: Rectangle, mode: u8) !void {
+    var args = [_]u16{
+        rect.x,
+        rect.y,
+        rect.w,
+        rect.h,
+        mode,
+    };
+
+    try epdWriteCommand(Commands.display_area);
+    try epdWriteMultiData(&args);
 }

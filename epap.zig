@@ -114,6 +114,19 @@ fn epdReadBusy() void {
 fn epdWriteData(data: u16) void {
     epdReadBusy();
     gpioLow(epdCsPin);
-    spiWriteWord(0x6000);
+    spiWriteWord(0x0000);
     epdReadBusy();
+    spiWriteWord(data);
+    gpioHigh(epdCsPin);
+}
+
+fn epdWriteMultiData(data: []u16) void {
+    epdReadBusy();
+    gpioLow(epdCsPin);
+    spiWriteWord(0x0000);
+    epdReadBusy();
+    for (data) |x| {
+        spiWriteWord(data);
+    }
+    gpioHigh(epdCsPin);
 }

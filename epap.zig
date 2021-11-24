@@ -59,3 +59,54 @@ fn gpio_write_bit(pin: u8, value: u8) void {
 fn gpio_read_bit(pin: u8) u8 {
     return c.bcm2835_gpio_lev(pin);
 }
+
+fn delay_ms(ms: c_uint) void {
+    c.bcm2835_delay(ms);
+}
+
+fn delay_us(us: u64) void {
+    c.bcm2835_delayMicroseconds(us);
+}
+
+fn epd_reset() void {
+    gpio_write_bit(epd_rst_pin, c.HIGH);
+    delay_ms(200);
+    gpio_write_bit(epd_rst_pin, c.LOW);
+    delay_ms(10);
+    gpio_write_bit(epd_rst_pin, c.HIGH);
+    delay_ms(200);
+}
+
+fn spi_write_byte(byte: u8) void {
+    c.bcm2835_spi_transfer(byte);
+}
+
+fn spi_write_word(word: u16) void {
+    spi_write_byte(@truncate(u8, word >> 8));
+    spi_write_byte(@truncate(u8, word));
+}
+
+fn gpio_low(pin: u8) void {
+    gpio_write_bit(pin, c.LOW);
+}
+
+fn gpio_high(pin: u8) void {
+    gpio_write_bit(pin, c.HIGH);
+}
+
+fn epd_write_command(command: u16) void {
+    epd_read_busy();
+    gpio_low(epd_cs_pin);
+    spi_write_word(0x6000);
+    epd_read_busy();
+    spi_write_word(command);
+    gpio_high(epd_cs_pin);
+}
+
+fn epd_read_busy() void {
+    while (true) {
+        if (gpio_read_bit(epd_busy_pin) == 1) {
+            return;
+        }
+    }
+}

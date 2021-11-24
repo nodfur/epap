@@ -6,9 +6,6 @@ const epdCsPin: u8 = 8;
 const epdBusyPin: u8 = 24;
 
 pub fn main() !void {
-    const stdout = std.io.getStdOut().writer();
-    try stdout.print("Hello, {s}!\n", .{"world"});
-
     try init();
     defer {
         exit() catch |err| std.log.err("BCM2835 exit failed", .{});

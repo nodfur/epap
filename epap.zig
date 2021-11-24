@@ -224,6 +224,8 @@ const SystemInfo = struct {
 
 fn epdGetSystemInfo() !SystemInfo {
     std.log.info("reading EPD system info", .{});
+
+    try epdWriteCommand(Commands.dev_info);
     try epdStartReading();
     defer csHigh();
 
@@ -242,6 +244,7 @@ const Commands = enum(u16) {
     sleep = 0x03,
     write_register = 0x11,
     vcom = 0x39,
+    dev_info = 0x302,
 };
 
 const Registers = enum(u16) {

@@ -130,3 +130,29 @@ fn epdWriteMultiData(data: []u16) void {
     }
     gpioHigh(epdCsPin);
 }
+
+fn spiReadByte() u8 {
+    return c.bcm2835_spi_transfer(0x00);
+}
+
+fn spiReadWord() u16 {
+    var hi: u8 = spiReadByte();
+    var lo: u8 = spiReadByte();
+    return @as(u16, hi << 8) | @as(u16, lo);
+}
+
+fn epdReadData() u16 {
+    epdReadBusy();
+    gpioLow(epdCsPin);
+    spiWriteWord(0x1000);
+    epdReadBusy();
+
+    _ = spiReadWord();
+    epdReadBusy();
+
+    var data: u16 = spiReadWord();
+
+    gpioHigh(epdCsPin);
+
+    return data;
+}

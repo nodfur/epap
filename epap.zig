@@ -168,7 +168,11 @@ fn spiReadByte() u8 {
 fn spiReadWord() u16 {
     var hi: u8 = spiReadByte();
     var lo: u8 = spiReadByte();
-    return (@as(u16, hi) << 8) | @as(u16, lo);
+    var word: u16 = (@as(u16, hi) << 8) | @as(u16, lo);
+
+    std.log.debug("read word 0x{x}", .{word});
+
+    return word;
 }
 
 fn spiReadU32() u32 {

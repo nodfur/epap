@@ -86,7 +86,9 @@ pub fn main() !void {
 
     var info = try epdInit(-1.73);
 
-    try epdClear(info, 0xff, 0);
+    // try epdClear(info, 0xff, 0);
+    // delayMs(1000);
+    try epdPlay(info);
     delayMs(1000);
 
     try epdSleep();
@@ -439,7 +441,7 @@ fn epdPlay(info: SystemInfo) !void {
         0, 
         info.panelWidth, 
         info.panelHeight, 
-        mode,
+        6,
     );
 
     try epdDisplayArea(Rectangle{
@@ -447,13 +449,13 @@ fn epdPlay(info: SystemInfo) !void {
         .y = 0,
         .w = info.panelWidth,
         .h = info.panelHeight,
-    }, mode);
+    }, 6);
 
-    var x = 500;
-    var y = 0;
+    var x: u16 = 500;
+    var y: u16 = 0;
 
     while (y < 100) {
-        try epdWrite4BP(.{0}, info.memoryAddress, x, y, 1, 1, 6);
+        try epdWrite4BP(&[_]u8{0}, info.memoryAddress, x, y, 1, 1, 6);
         try epdDisplayArea(Rectangle{
             .x = x,
             .y = y,
@@ -465,7 +467,7 @@ fn epdPlay(info: SystemInfo) !void {
     }
 }
 
-fn epdWrite4BP(data: []u8, address: u32, x: u16, y: u16, width: u16, height: u16, mode: u8) !void {
+fn epdWrite4BP(data: []const u8, address: u32, x: u16, y: u16, width: u16, height: u16, mode: u8) !void {
     std.log.info("writing 4bp", .{});
 
     var info = ImageLoadParams{

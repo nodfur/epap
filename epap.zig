@@ -333,7 +333,7 @@ fn epdSleep() !void {
 
 fn epdSetVcom(vcom: f64) !void {
     var vcom_word: u16 =
-        @truncate(u16, @bitCast(u64, @fabs(vcom) * 1000.0));
+        @floatToInt(u16, @fabs(vcom) * 1000.0);
 
     std.log.info("setting vcom to {d} (0x{x})", .{vcom, vcom_word});
 

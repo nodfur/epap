@@ -442,8 +442,14 @@ fn epdWrite4BP(data: []u8, address: u32, x: u16, y: u16, width: u16, height: u16
     std.io.getStdOut().writer().print("\n\n", .{}) catch |err| {
         std.log.err("error writing to stdout: {s}", .{err});
     };
-    
+
     try epdWriteCommand(Commands.load_img_end);
+}
+
+fn dumpMessage(msg: []u8) void {
+    std.io.getStdOut().writer().write(msg) catch |err| {
+        std.log.err("error writing to stdout: {s}", .{err}); 
+    };
 }
 
 fn epdSetTargetAddress(address: u32) !void {

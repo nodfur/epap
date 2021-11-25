@@ -314,7 +314,7 @@ fn epdInit(vcom: f64) !SystemInfo {
 
     std.log.info("panel width: {d}", .{info.panelWidth});
     std.log.info("panel height: {d}", .{info.panelHeight});
-    std.log.info("memory address: 0x{x}", .{info.panelHeight});
+    std.log.info("memory address: 0x{x}", .{info.memoryAddress});
     std.log.info("firmware version: {s}", .{info.fwVersion});
     std.log.info("LUT version: {s}", .{info.lutVersion});
 

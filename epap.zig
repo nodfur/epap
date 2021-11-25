@@ -449,7 +449,7 @@ fn dumpMessage(msg: []const u8) void {
 }
 
 fn writeStdout(msg: []const u8) void {
-    _ = std.io.getStdOut().writer().write(msg) catch |err| {
+    _ = std.io.getStdOut().writer().writeAll(msg) catch |err| {
         std.log.err("error writing to stdout: {s}", .{err}); 
     };
 }

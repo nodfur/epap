@@ -86,8 +86,8 @@ pub fn main() !void {
 
     var info = try epdInit(-1.73);
 
-    try epdClear(info, 0xff, 0);
-    delayMs(200);
+    // try epdClear(info, 0xff, 0);
+    // delayMs(200);
     try epdPlay(info);
     delayMs(1000);
     try epdClear(info, 0xff, 0);
@@ -436,8 +436,8 @@ fn epdPlay(info: SystemInfo) !void {
 
     var i: usize = 0;
     while (i * 2 < size) {
-        frame[i * 2] = @truncate(u8, i >> 8);
-        frame[i * 2 + 1] = @truncate(u8, i);
+        frame[i * 2] = 0b10101010;
+        frame[i * 2 + 1] = 0b01010101;
         i += 1;
     }
 

@@ -412,6 +412,7 @@ fn epdWrite4BP(data: []u8, address: u32, x: u16, y: u16, width: u16, height: u16
     var i: usize = 0;
     while (i * 2 < length) {
         try epdWriteU16(@as(u16, data[i * 2 + 0]) | (@as(u16, data[i * 2 + 1]) << 8));
+        i += 1;
     }
 
     try epdWriteCommand(Commands.load_img_end);

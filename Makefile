@@ -6,6 +6,5 @@ epap: epap.zig Makefile
 build: epap
 clean:; rm epap
 save:; git save
-yolo:; make build && make save
 
-watch:; ls | entr -r make yolo
+watch:; ls | entr -r sh -c "make build && make save"

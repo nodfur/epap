@@ -217,11 +217,12 @@ fn epdStartPacket(kind: PacketType) !void {
 
 fn epdWriteCommand(command: Commands) !void {
     std.log.info("cmd {x} {x}", .{@enumToInt(command), command});
-    dumpMessage("command");
+    dumpMessage("<cmd>");
     try epdStartPacket(PacketType.command);
     defer csHigh();
 
     try spiWriteWord(@enumToInt(command));
+    dumpMessage("</cmd>");
 }
 
 fn epdWriteU16(data: u16) !void {

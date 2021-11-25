@@ -368,11 +368,11 @@ fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {
 
     var hmm: bool = info.panelWidth * 4 % 8 == 0;
 
-    var width =
+    var width: usize =
         if (hmm) info.panelWidth * 4 / 8 else info.panelWidth * 4 / 8 + 1;
 
     var size: usize =
-        width * info.panelHeight;
+        width * @as(usize, info.panelHeight);
 
     var frame: []u8 = try allocator.alloc(u8, size);
     defer allocator.free(frame);

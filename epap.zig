@@ -249,6 +249,7 @@ fn spiReadWord() u16 {
 }
 
 fn spiReadU32() u32 {
+    std.log.info("reading U32\n", .{});
     // this is kinda backwards...
     var hi: u16 = spiReadWord();
     var lo: u16 = spiReadWord();

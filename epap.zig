@@ -3,9 +3,11 @@ const std = @import("std");
 
 const allocator = std.heap.c_allocator;
 
-const epdRstPin: u8 = 17;
-const epdCsPin: u8 = 8;
-const epdBusyPin: u8 = 24;
+const Pin = enum (u8) {
+    rst = 17,
+    cs = 8,
+    busy = 24,
+};
 
 pub fn main() !void {
     try init();
@@ -45,8 +47,8 @@ fn init() !void {
 fn exit() !void {
     std.log.info("closing BCM2835", .{});
 
-    gpioWriteBit(epdCsPin, c.LOW);
-    gpioWriteBit(epdRstPin, c.LOW);
+    gpioWriteBit(Pin.cs, c.LOW);
+    gpioWriteBit(Pin.rst, c.LOW);
 
     c.bcm2835_spi_end();
 
@@ -55,29 +57,31 @@ fn exit() !void {
     }
 }
 
-fn gpioMode(pin: u8, mode: u16) void {
-    if (mode == 0 or mode == c.BCM2835_GPIO_FSEL_INPT) {
-        c.bcm2835_gpio_fsel(pin, c.BCM2835_GPIO_FSEL_INPT);
-    } else {
-        c.bcm2835_gpio_fsel(pin, c.BCM2835_GPIO_FSEL_OUTP);
-    }
+fn gpioMode(pin: Pin, mode: u16) void {
+    c.bcm2835_gpio_fsel(
+        @enumToInt(pin),
+        if (mode == 0 or mode == c.BCM2835_GPIO_FSEL_INPT)
+            c.BCM2835_GPIO_FSEL_INPT
+        else
+            c.BCM2835_GPIO_FSEL_OUTP
+    );
 }
 
 fn gpioInit() void {
     std.log.info("starting GPIO", .{});
-    gpioMode(epdRstPin, c.BCM2835_GPIO_FSEL_OUTP);
-    gpioMode(epdCsPin, c.BCM2835_GPIO_FSEL_OUTP);
-    gpioMode(epdBusyPin, c.BCM2835_GPIO_FSEL_INPT);
+    gpioMode(Pin.rst, c.BCM2835_GPIO_FSEL_OUTP);
+    gpioMode(Pin.cs, c.BCM2835_GPIO_FSEL_OUTP);
+    gpioMode(Pin.busy, c.BCM2835_GPIO_FSEL_INPT);
 
-    gpioWriteBit(epdCsPin, c.HIGH);
+    gpioWriteBit(Pin.cs, c.HIGH);
 }
 
-fn gpioWriteBit(pin: u8, value: u8) void {
-    c.bcm2835_gpio_write(pin, value);
+fn gpioWriteBit(pin: Pin, value: u8) void {
+    c.bcm2835_gpio_write(@enumToInt(pin), value);
 }
 
-fn gpioReadBit(pin: u8) u8 {
-    return c.bcm2835_gpio_lev(pin);
+fn gpioReadBit(pin: Pin) u8 {
+    return c.bcm2835_gpio_lev(@enumToInt(pin));
 }
 
 fn delayMs(ms: c_uint) void {
@@ -90,11 +94,11 @@ fn delayUs(us: u64) void {
 
 fn epdReset() void {
     std.log.info("resetting EPD", .{});
-    gpioWriteBit(epdRstPin, c.HIGH);
+    gpioWriteBit(Pin.rst, c.HIGH);
     delayMs(200);
-    gpioWriteBit(epdRstPin, c.LOW);
+    gpioWriteBit(Pin.rst, c.LOW);
     delayMs(10);
-    gpioWriteBit(epdRstPin, c.HIGH);
+    gpioWriteBit(Pin.rst, c.HIGH);
     delayMs(200);
 }
 
@@ -107,25 +111,25 @@ fn spiWriteWord(word: u16) !void {
     spiWriteByte(@truncate(u8, word));
 }
 
-fn gpioLow(pin: u8) void {
+fn gpioLow(pin: Pin) void {
     gpioWriteBit(pin, c.LOW);
 }
 
-fn gpioHigh(pin: u8) void {
+fn gpioHigh(pin: Pin) void {
     gpioWriteBit(pin, c.HIGH);
 }
 
 fn csLow() void {
-    gpioLow(epdCsPin);
+    gpioLow(Pin.cs);
 }
 
 fn csHigh() void {
-    gpioHigh(epdCsPin);
+    gpioHigh(Pin.cs);
 }
 
 fn wait() void {
     while (true) {
-        if (gpioReadBit(epdBusyPin) == 1) {
+        if (gpioReadBit(Pin.busy) == 1) {
             return;
         }
     }
@@ -342,7 +346,16 @@ fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {
 
     std.mem.set(u8, frame, byte);
 
-    try epdWrite4BP(frame, info.memoryAddress, 0, 0, info.panelWidth, info.panelHeight, mode);
+    try epdWrite4BP(
+        frame, 
+        info.memoryAddress, 
+        0, 
+        0, 
+        info.panelWidth, 
+        info.panelHeight, 
+        mode,
+    );
+
     try epdDisplayArea(Rectangle{
         .x = 0,
         .y = 0,

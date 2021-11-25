@@ -213,6 +213,7 @@ fn epdStartPacket(kind: PacketType) !void {
 }
 
 fn epdWriteCommand(command: Commands) !void {
+    std.log.info("writing command 0x{x}", .{command});
     try epdStartPacket(PacketType.command);
     defer csHigh();
 

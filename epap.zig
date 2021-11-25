@@ -194,6 +194,7 @@ fn csLow() void {
 }
 
 fn csHigh() void {
+    dumpMessage(".");
     gpioHigh(Pin.cs);
 }
 
@@ -215,6 +216,7 @@ fn epdStartPacket(kind: PacketType) !void {
 
 fn epdWriteCommand(command: Commands) !void {
     std.log.info("cmd {x} {x}", .{@enumToInt(command), command});
+    dumpMessage("command");
     try epdStartPacket(PacketType.command);
     defer csHigh();
 
@@ -309,7 +311,6 @@ fn epdGetSystemInfo() !SystemInfo {
 }
 
 fn epdInit(vcom: f64) !SystemInfo {
-    dumpMessage("epd init");
     epdReset();
 
     std.log.info("starting EPD", .{});

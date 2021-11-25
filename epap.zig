@@ -170,8 +170,8 @@ fn epdReset() void {
 
 fn spiWriteByte(byte: u8) void {
     _ = c.bcm2835_spi_transfer(byte);
-    std.io.getStdOut().writer().print("{x:0>2}", .{byte}) catch |err| 
-        std.log.err("spiWriteByte failed {}", .{err});
+    // std.io.getStdOut().writer().print("{x:0>2}", .{byte}) catch |err| 
+    //     std.log.err("spiWriteByte failed {}", .{err});
 }
 
 fn spiWriteWord(word: u16) !void {

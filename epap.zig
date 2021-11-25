@@ -430,30 +430,26 @@ fn epdWrite4BP(data: []u8, address: u32, x: u16, y: u16, width: u16, height: u16
 
     std.log.info("length {d}", .{length});
 
-    std.io.getStdOut().writer().print("\n\n", .{}) catch |err| {
-        std.log.err("error writing to stdout: {s}", .{err});
-    };
+    dumpMessage("image start");
 
     while (i * 2 < length) {
         try epdWriteU16(@as(u16, data[i * 2 + 0]) | (@as(u16, data[i * 2 + 1]) << 8));
         i += 1;
     }
 
-    std.io.getStdOut().writer().print("\n\n", .{}) catch |err| {
-        std.log.err("error writing to stdout: {s}", .{err});
-    };
+    dumpMessage("image end");
 
     try epdWriteCommand(Commands.load_img_end);
 }
 
-fn dumpMessage(msg: []u8) void {
+fn dumpMessage(msg: []const u8) void {
     writeStdout("\n");
     writeStdout(msg);
     writeStdout("\n");
 }
 
-fn writeStdout(msg: []u8) void {
-    std.io.getStdOut().writer().write(msg) catch |err| {
+fn writeStdout(msg: []const u8) void {
+    _ = std.io.getStdOut().writer().write(msg) catch |err| {
         std.log.err("error writing to stdout: {s}", .{err}); 
     };
 }

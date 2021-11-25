@@ -88,7 +88,7 @@ pub fn main() !void {
 
     try epdClear(info, 0xff, 0);
     delayMs(1000);
-    
+
     try epdSleep();
 }
 
@@ -332,10 +332,10 @@ fn epdSleep() !void {
 }
 
 fn epdSetVcom(vcom: f64) !void {
-    std.log.info("setting vcom to {d}", .{vcom});
-
     var vcom_word: u16 =
         @truncate(u16, @bitCast(u64, @fabs(vcom) * 1000.0));
+
+    std.log.info("setting vcom to {d} (0x{x})", .{vcom, vcom_word});
 
     try epdWriteCommand(Commands.vcom);
     try epdWriteU16(1);

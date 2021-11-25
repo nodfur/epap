@@ -408,7 +408,7 @@ fn epdWrite4BP(data: []u8, address: u32, x: u16, y: u16, width: u16, height: u16
 
     try epdSetTargetAddress(address);
 
-    var length = ((width * 4 / 8) / 2) * height;
+    var length: usize = ((@as(usize, width) * 4 / 8) / 2) * @as(usize, height);
     var i: usize = 0;
     while (i * 2 < length) {
         try epdWriteU16(@as(u16, data[i * 2 + 0]) | (@as(u16, data[i * 2 + 1]) << 8));

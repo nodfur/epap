@@ -9,6 +9,75 @@ const Pin = enum (u8) {
     busy = 24,
 };
 
+const PacketType = enum(u16) {
+    command = 0x6000,
+    write = 0x0000,
+    read = 0x1000,
+};
+
+const SystemInfo = struct {
+    panelWidth: u16,
+    panelHeight: u16,
+    memoryAddress: u32,
+    fwVersion: [16]u8,
+    lutVersion: [16]u8,
+};
+
+const Commands = enum(u16) {
+    run = 0x1,
+    standby = 0x2,
+    sleep = 0x03,
+    read_register = 0x10,
+    write_register = 0x11,
+    vcom = 0x39,
+    dev_info = 0x302,
+    load_img_area_start = 0x21,
+    load_img_end = 0x22,
+    display_area = 0x34,
+};
+
+const mcsr_base_address: u16 = 0x200;
+const display_reg_base: u16 = 0x1000;
+
+const Registers = enum(u16) {
+    i80cpcr = 0x04,
+    lisar0 = mcsr_base_address + 0x8,
+    lisar2 = mcsr_base_address + 0x8 + 2,
+    lutafsr = display_reg_base + 0x224,
+};
+
+const Endianness = enum(u1) {
+    little = 0,
+    big = 1,
+};
+
+const PixelFormat = enum(u2) {
+    bpp2 = 0,
+    bpp3 = 1,
+    bpp4 = 2,
+    bpp8 = 3,
+};
+
+const Rotation = enum(u2) {
+    normal = 0,
+    rotate_90 = 1,
+    rotate_180 = 2,
+    rotate_270 = 3,
+};
+
+const LoadImgInfo = struct {
+    endianness: Endianness,
+    pixel_format: PixelFormat,
+    rotation: Rotation,
+};
+
+const Rectangle = struct {
+    x: u16,
+    y: u16,
+    w: u16,
+    h: u16,
+};
+
 pub fn main() !void {
     try init();
     defer {
@@ -135,11 +204,6 @@ fn wait() void {
     }
 }
 
-const PacketType = enum(u16) {
-    command = 0x6000,
-    write = 0x0000,
-    read = 0x1000,
-};
 
 fn epdStartPacket(kind: PacketType) !void {
     wait();
@@ -224,14 +288,6 @@ fn epdReadWords(slice: []u16) void {
     }
 }
 
-const SystemInfo = struct {
-    panelWidth: u16,
-    panelHeight: u16,
-    memoryAddress: u32,
-    fwVersion: [16]u8,
-    lutVersion: [16]u8,
-};
-
 fn epdGetSystemInfo() !SystemInfo {
     std.log.info("reading EPD system info", .{});
 
@@ -247,29 +303,6 @@ fn epdGetSystemInfo() !SystemInfo {
         .lutVersion = spiReadBytes(16),
     };
 }
-
-const Commands = enum(u16) {
-    run = 0x1,
-    standby = 0x2,
-    sleep = 0x03,
-    read_register = 0x10,
-    write_register = 0x11,
-    vcom = 0x39,
-    dev_info = 0x302,
-    load_img_area_start = 0x21,
-    load_img_end = 0x22,
-    display_area = 0x34,
-};
-
-const mcsr_base_address: u16 = 0x200;
-const display_reg_base: u16 = 0x1000;
-
-const Registers = enum(u16) {
-    i80cpcr = 0x04,
-    lisar0 = mcsr_base_address + 0x8,
-    lisar2 = mcsr_base_address + 0x8 + 2,
-    lutafsr = display_reg_base + 0x224,
-};
 
 fn epdInit(vcom: f64) !SystemInfo {
     epdReset();
@@ -363,38 +396,6 @@ fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {
         .h = info.panelHeight,
     }, mode);
 }
-
-const Endianness = enum(u1) {
-    little = 0,
-    big = 1,
-};
-
-const PixelFormat = enum(u2) {
-    bpp2 = 0,
-    bpp3 = 1,
-    bpp4 = 2,
-    bpp8 = 3,
-};
-
-const Rotation = enum(u2) {
-    normal = 0,
-    rotate_90 = 1,
-    rotate_180 = 2,
-    rotate_270 = 3,
-};
-
-const LoadImgInfo = struct {
-    endianness: Endianness,
-    pixel_format: PixelFormat,
-    rotation: Rotation,
-};
-
-const Rectangle = struct {
-    x: u16,
-    y: u16,
-    w: u16,
-    h: u16,
-};
 
 fn epdWrite4BP(data: []u8, address: u32, x: u16, y: u16, width: u16, height: u16, mode: u8) !void {
     std.log.info("writing 4bp", .{});

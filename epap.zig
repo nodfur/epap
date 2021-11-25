@@ -86,9 +86,11 @@ pub fn main() !void {
 
     var info = try epdInit(-1.73);
 
-    // try epdClear(info, 0xff, 0);
-    // delayMs(1000);
+    try epdClear(info, 0xff, 0);
+    delayMs(1000);
     try epdPlay(info);
+    delayMs(1000);
+    try epdClear(info, 0xff, 0);
     delayMs(1000);
 
     try epdSleep();
@@ -432,7 +434,9 @@ fn epdPlay(info: SystemInfo) !void {
     var frame: []u8 = try allocator.alloc(u8, size);
     defer allocator.free(frame);
 
-    std.mem.set(u8, frame, 0xff);
+    for (frame) |_, i| {
+        frame[i] = @truncate(u8, i);
+    }
 
     try epdWrite4BP(
         frame, 
@@ -441,7 +445,7 @@ fn epdPlay(info: SystemInfo) !void {
         0, 
         info.panelWidth, 
         info.panelHeight, 
-        6,
+        2,
     );
 
     try epdDisplayArea(Rectangle{
@@ -449,22 +453,7 @@ fn epdPlay(info: SystemInfo) !void {
         .y = 0,
         .w = info.panelWidth,
         .h = info.panelHeight,
-    }, 6);
-
-    var x: u16 = 500;
-    var y: u16 = 0;
-
-    while (y < 100) {
-        try epdWrite4BP(&[_]u8{0}, info.memoryAddress, x, y, 1, 1, 6);
-        try epdDisplayArea(Rectangle{
-            .x = x,
-            .y = y,
-            .w = 1,
-            .h = 1,
-        }, 6);
-
-        y += 1;
-    }
+    }, 2);
 }
 
 fn epdWrite4BP(data: []const u8, address: u32, x: u16, y: u16, width: u16, height: u16, mode: u8) !void {

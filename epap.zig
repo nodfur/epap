@@ -3,8 +3,6 @@ const c = @cImport(@cInclude("bcm2835.h"));
 
 const allocator = std.heap.c_allocator;
 
-var stdout = std.io.stdout;
-
 const Pin = enum (u8) {
     rst = 17,
     cs = 8,
@@ -174,6 +172,8 @@ fn epdReset() void {
 
 fn spiWriteByte(byte: u8) void {
     _ = c.bcm2835_spi_transfer(byte);
+    std.io.getStdOut().writer().print("{x:0>2}", .{byte}) catch |err| 
+        std.log.err("spiWriteByte failed", .{});
 }
 
 fn spiWriteWord(word: u16) !void {

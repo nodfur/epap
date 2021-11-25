@@ -228,6 +228,7 @@ fn epdWriteU16(data: u16) !void {
 }
 
 fn epdWriteMultiData(data: []u16) !void {
+    std.log.info("writing {d} data words", .{data.len});
     try epdStartPacket(PacketType.write);
     defer csHigh();
 

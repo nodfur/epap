@@ -3,6 +3,8 @@ const c = @cImport(@cInclude("bcm2835.h"));
 
 const allocator = std.heap.c_allocator;
 
+var stdout = std.io.stdout;
+
 const Pin = enum (u8) {
     rst = 17,
     cs = 8,

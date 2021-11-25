@@ -1,5 +1,5 @@
-const c = @cImport(@cInclude("bcm2835.h"));
 const std = @import("std");
+const c = @cImport(@cInclude("bcm2835.h"));
 
 const allocator = std.heap.c_allocator;
 
@@ -65,7 +65,7 @@ const Rotation = enum(u2) {
     rotate_270 = 3,
 };
 
-const LoadImgInfo = struct {
+const ImageLoadParams = struct {
     endianness: Endianness,
     pixel_format: PixelFormat,
     rotation: Rotation,
@@ -400,7 +400,7 @@ fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {
 fn epdWrite4BP(data: []u8, address: u32, x: u16, y: u16, width: u16, height: u16, mode: u8) !void {
     std.log.info("writing 4bp", .{});
 
-    var info = LoadImgInfo{
+    var info = ImageLoadParams{
         .endianness = Endianness.little,
         .pixel_format = PixelFormat.bpp4,
         .rotation = Rotation.normal,
@@ -424,7 +424,7 @@ fn epdSetTargetAddress(address: u32) !void {
     try epdWriteRegister(Registers.lisar0, addressLow);
 }
 
-fn epdLoadImgAreaStart(info: LoadImgInfo, rect: Rectangle) !void {
+fn epdLoadImgAreaStart(info: ImageLoadParams, rect: Rectangle) !void {
     var format: u16 =
         (@enumToInt(info.endianness) << 8) | (@enumToInt(info.pixel_format) << 4) | (@enumToInt(info.rotation));
 

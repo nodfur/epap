@@ -222,7 +222,7 @@ fn epdWriteCommand(command: Commands) !void {
     defer csHigh();
 
     try spiWriteWord(@enumToInt(command));
-    dumpMessage("</cmd>");
+    dumpMessage("</cmd>\n");
 }
 
 fn epdWriteU16(data: u16) !void {

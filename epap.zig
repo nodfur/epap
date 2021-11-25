@@ -309,6 +309,7 @@ fn epdGetSystemInfo() !SystemInfo {
 }
 
 fn epdInit(vcom: f64) !SystemInfo {
+    dumpMessage("epd init");
     epdReset();
 
     std.log.info("starting EPD", .{});

@@ -190,6 +190,7 @@ fn gpioHigh(pin: Pin) void {
 }
 
 fn csLow() void {
+    dumpMessage(":");
     gpioLow(Pin.cs);
 }
 

@@ -415,6 +415,56 @@ fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {
     }, mode);
 }
 
+fn epdPlay(info: SystemInfo) !void {
+    try epdWaitForDisplay();
+    var hmm: bool = info.panelWidth * 4 % 8 == 0;
+
+    var width: usize =
+        if (hmm) info.panelWidth * 4 / 8 else info.panelWidth * 4 / 8 + 1;
+
+    var size: usize =
+        width * @as(usize, info.panelHeight);
+
+    std.log.info("clearing {d} bytes, width {d}", .{size, width});
+
+    var frame: []u8 = try allocator.alloc(u8, size);
+    defer allocator.free(frame);
+
+    std.mem.set(u8, frame, 0xff);
+
+    try epdWrite4BP(
+        frame, 
+        info.memoryAddress, 
+        0, 
+        0, 
+        info.panelWidth, 
+        info.panelHeight, 
+        mode,
+    );
+
+    try epdDisplayArea(Rectangle{
+        .x = 0,
+        .y = 0,
+        .w = info.panelWidth,
+        .h = info.panelHeight,
+    }, mode);
+
+    var x = 500;
+    var y = 0;
+
+    while (y < 100) {
+        try epdWrite4BP(.{0}, info.memoryAddress, x, y, 1, 1, 6);
+        try epdDisplayArea(Rectangle{
+            .x = x,
+            .y = y,
+            .w = 1,
+            .h = 1,
+        }, 6);
+
+        y += 1;
+    }
+}
+
 fn epdWrite4BP(data: []u8, address: u32, x: u16, y: u16, width: u16, height: u16, mode: u8) !void {
     std.log.info("writing 4bp", .{});
 

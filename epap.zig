@@ -88,8 +88,6 @@ pub fn main() !void {
 
     try epdClear(info, 0xff, 0);
     delayMs(1000);
-    try epdClear(info, 0xff, 0);
-    delayMs(1000);
 
     try epdSleep();
 }

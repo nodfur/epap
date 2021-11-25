@@ -433,22 +433,20 @@ fn epdWrite4BP(data: []u8, address: u32, x: u16, y: u16, width: u16, height: u16
 
     std.log.info("length {d}", .{length});
 
-    dumpMessage("image start");
+    dumpMessage("\n<img>");
 
     while (i * 2 < length) {
         try epdWriteU16(@as(u16, data[i * 2 + 0]) | (@as(u16, data[i * 2 + 1]) << 8));
         i += 1;
     }
 
-    dumpMessage("image end");
+    dumpMessage("</img>\n");
 
     try epdWriteCommand(Commands.load_img_end);
 }
 
 fn dumpMessage(msg: []const u8) void {
-    writeStdout("\n");
     writeStdout(msg);
-    writeStdout("\n");
 }
 
 fn writeStdout(msg: []const u8) void {

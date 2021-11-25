@@ -408,6 +408,13 @@ fn epdWrite4BP(data: []u8, address: u32, x: u16, y: u16, width: u16, height: u16
 
     try epdSetTargetAddress(address);
 
+    try epdLoadImgAreaStart(info, Rectangle{
+        .x = x,
+        .y = y,
+        .w = width,
+        .h = height,
+    });
+
     var length: usize = ((@as(usize, width) * 4 / 8) / 2) * @as(usize, height);
     var i: usize = 0;
     while (i * 2 < length) {
@@ -427,7 +434,9 @@ fn epdSetTargetAddress(address: u32) !void {
 
 fn epdLoadImgAreaStart(info: ImageLoadParams, rect: Rectangle) !void {
     var format: u16 =
-        (@enumToInt(info.endianness) << 8) | (@enumToInt(info.pixel_format) << 4) | (@enumToInt(info.rotation));
+        (@as(u16, @enumToInt(info.endianness)) << 8) | 
+        (@as(u16, @enumToInt(info.pixel_format)) << 4) | 
+        @as(u16, @enumToInt(info.rotation));
 
     var args = [_]u16{
         format,

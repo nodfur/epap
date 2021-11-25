@@ -373,6 +373,8 @@ fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {
     var size: usize =
         width * @as(usize, info.panelHeight);
 
+    std.log.info("clearing {d} bytes, width {d}", .{size, width});
+
     var frame: []u8 = try allocator.alloc(u8, size);
     defer allocator.free(frame);
 

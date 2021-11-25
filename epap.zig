@@ -88,6 +88,8 @@ pub fn main() !void {
 
     try epdClear(info, 0xff, 0);
     delayMs(1000);
+    try epdClear(info, 0xff, 0);
+    delayMs(1000);
 
     try epdSleep();
 }
@@ -336,7 +338,11 @@ fn epdSetVcom(vcom: f64) !void {
     var vcom_word: u16 =
         @floatToInt(u16, @fabs(vcom) * 1000.0);
 
-    std.log.info("setting vcom to {d} (0x{x})", .{vcom, vcom_word});
+    try epdWriteCommand(Commands.vcom);
+    try epdWriteU16(0);
+    var read_vcom: u16 = try epdReadWord();
+
+    std.log.info("setting vcom from 0x{x} to {d} (0x{x})", .{read_vcom, vcom, vcom_word});
 
     try epdWriteCommand(Commands.vcom);
     try epdWriteU16(1);

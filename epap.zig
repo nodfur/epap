@@ -87,11 +87,11 @@ pub fn main() !void {
     var info = try epdInit(-1.73);
 
     try epdClear(info, 0xff, 0);
-    delayMs(1000);
+    delayMs(200);
     try epdPlay(info);
     delayMs(1000);
     try epdClear(info, 0xff, 0);
-    delayMs(1000);
+    delayMs(200);
 
     try epdSleep();
 }
@@ -481,7 +481,7 @@ fn epdWrite4BP(data: []const u8, address: u32, x: u16, y: u16, width: u16, heigh
 
     dumpMessage("\n<img>");
 
-    while (i * 2 < length) {
+    while (i * 2 < data.len) {
         try epdWriteU16(@as(u16, data[i * 2 + 0]) | (@as(u16, data[i * 2 + 1]) << 8));
         i += 1;
     }

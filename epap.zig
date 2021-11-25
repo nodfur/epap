@@ -447,6 +447,12 @@ fn epdWrite4BP(data: []u8, address: u32, x: u16, y: u16, width: u16, height: u16
 }
 
 fn dumpMessage(msg: []u8) void {
+    writeStdout("\n");
+    writeStdout(msg);
+    writeStdout("\n");
+}
+
+fn writeStdout(msg: []u8) void {
     std.io.getStdOut().writer().write(msg) catch |err| {
         std.log.err("error writing to stdout: {s}", .{err}); 
     };

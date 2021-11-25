@@ -484,7 +484,7 @@ fn epdLoadImgAreaStart(info: ImageLoadParams, rect: Rectangle) !void {
     };
 
     try epdWriteCommand(Commands.load_img_area_start);
-    try epdWriteMultiData(&args);
+    try epdWriteMultiArg(&args);
 }
 
 fn epdDisplayArea(rect: Rectangle, mode: u8) !void {
@@ -499,5 +499,5 @@ fn epdDisplayArea(rect: Rectangle, mode: u8) !void {
     };
 
     try epdWriteCommand(Commands.display_area);
-    try epdWriteMultiData(&args);
+    try epdWriteMultiArg(&args);
 }

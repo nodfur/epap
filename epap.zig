@@ -442,6 +442,8 @@ fn epdLoadImgAreaStart(info: ImageLoadParams, rect: Rectangle) !void {
 }
 
 fn epdDisplayArea(rect: Rectangle, mode: u8) !void {
+    std.log.info("displaying area with mode {d}", .{mode});
+
     var args = [_]u16{
         rect.x,
         rect.y,

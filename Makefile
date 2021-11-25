@@ -6,3 +6,4 @@ epap: epap.zig Makefile
 build: epap
 clean:; rm epap
 save:; git save
+run:; sudo ./epap

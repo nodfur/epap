@@ -242,6 +242,12 @@ fn epdWriteMultiData(data: []u16) !void {
     }
 }
 
+fn epdWriteMultiArg(data: []u16) !void {
+    for (data) |x| {
+        try epdWriteU16(x);
+    }
+}
+
 fn spiReadByte() u8 {
     return c.bcm2835_spi_transfer(0x00);
 }

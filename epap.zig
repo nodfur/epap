@@ -434,8 +434,10 @@ fn epdPlay(info: SystemInfo) !void {
     var frame: []u8 = try allocator.alloc(u8, size);
     defer allocator.free(frame);
 
-    for (frame) |_, i| {
-        frame[i] = @truncate(u8, i);
+    var i: usize = 0;
+    while (i * 2 < size) {
+        frame[i * 2] = @truncate(u8, i >> 8);
+        frame[i * 2 + 1] = @truncate(u8, i);
     }
 
     try epdWrite4BP(

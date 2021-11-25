@@ -438,6 +438,7 @@ fn epdPlay(info: SystemInfo) !void {
     while (i * 2 < size) {
         frame[i * 2] = @truncate(u8, i >> 8);
         frame[i * 2 + 1] = @truncate(u8, i);
+        i += 1;
     }
 
     try epdWrite4BP(

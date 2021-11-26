@@ -1,8 +1,6 @@
 const std = @import("std");
 const c = @cImport(@cInclude("bcm2835.h"));
 
-const allocator = std.heap.c_allocator;
-
 const Pin = enum (u8) {
     rst = 17,
     cs = 8,
@@ -86,10 +84,6 @@ pub fn main() !void {
 
     var info = try epdInit(-1.73);
 
-    // try epdClear(info, 0xff, 0);
-    // delayMs(200);
-    try epdPlay(info);
-    delayMs(1000);
     try epdClear(info, 0xff, 0);
     delayMs(200);
 
@@ -383,25 +377,26 @@ fn epdWaitForDisplay() !void {
     }
 }
 
-fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {
-    try epdWaitForDisplay();
+fn byteSizeForImage(width: u16, height: u16, bitsPerPixel: u8) usize {    
+    return (@as(usize, width) * @as(usize, height) * @as(usize, bitsPerPixel)) / 8;
+}
 
-    var width: usize =
-        info.panelWidth * 4 / 8;
+fn allocateImageArray(width: u16, height: u16, bitsPerPixel: u8, allocator: *std.mem.Allocator) ![]u8 {
+    var size = byteSizeForImage(width, height, bitsPerPixel);
+    return allocator.alloc(u8, size);
+}
 
-    var size: usize =
-        width * @as(usize, info.panelHeight);
-
-    std.log.info("clearing {d} bytes, width {d}", .{size, width});
-
-    var frame: []u8 = try allocator.alloc(u8, size);
-    defer allocator.free(frame);
+fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {    
+    var frame = try allocateImageArray(info.panelWidth, info.panelHeight, 1, std.heap.c_allocator);
+    defer std.heap.c_allocator.free(frame);
 
     std.mem.set(u8, frame, byte);
 
+    try epdWaitForDisplay();
+
     try epdWrite4BP(
         frame, 
-        info.memoryAddress, 
+        info.memoryAddress,
         0, 
         0, 
         info.panelWidth, 
@@ -415,46 +410,6 @@ fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {
         .w = info.panelWidth,
         .h = info.panelHeight,
     }, mode);
-}
-
-fn epdPlay(info: SystemInfo) !void {
-    try epdWaitForDisplay();
-    var hmm: bool = info.panelWidth * 4 % 8 == 0;
-
-    var width: usize =
-        if (hmm) info.panelWidth * 4 / 8 else info.panelWidth * 4 / 8 + 1;
-
-    var size: usize =
-        width * @as(usize, info.panelHeight);
-
-    std.log.info("clearing {d} bytes, width {d}", .{size, width});
-
-    var frame: []u8 = try allocator.alloc(u8, size);
-    defer allocator.free(frame);
-
-    var i: usize = 0;
-    while (i * 2 < size) {
-        frame[i * 2] = 0b10101010;
-        frame[i * 2 + 1] = 0b01010101;
-        i += 1;
-    }
-
-    try epdWrite4BP(
-        frame, 
-        info.memoryAddress, 
-        0, 
-        0, 
-        info.panelWidth, 
-        info.panelHeight, 
-        2,
-    );
-
-    try epdDisplayArea(Rectangle{
-        .x = 0,
-        .y = 0,
-        .w = info.panelWidth,
-        .h = info.panelHeight,
-    }, 2);
 }
 
 fn epdWrite4BP(data: []const u8, address: u32, x: u16, y: u16, width: u16, height: u16, mode: u8) !void {

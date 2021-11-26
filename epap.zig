@@ -56,6 +56,15 @@ const PixelFormat = enum(u2) {
     bpp3 = 1,
     bpp4 = 2,
     bpp8 = 3,
+
+    pub fn bits(self: PixelFormat) usize {
+        return switch (self) {
+            PixelFormat.bpp2 => 2,
+            PixelFormat.bpp3 => 3,
+            PixelFormat.bpp4 => 4,
+            PixelFormat.bpp8 => 8,
+        };
+    }
 };
 
 const Rotation = enum(u2) {
@@ -379,20 +388,6 @@ fn epdWaitForDisplay() !void {
     }
 }
 
-fn byteSizeForImage(width: u16, height: u16, bitsPerPixel: u8) usize {    
-    return (@as(usize, width) * @as(usize, height) * @as(usize, bitsPerPixel)) / 8;
-}
-
-fn allocateImageBuffer(
-    width: u16, 
-    height: u16, 
-    bitsPerPixel: u8, 
-    allocator: *std.mem.Allocator,
-) ![]u8 {
-    var size = byteSizeForImage(width, height, bitsPerPixel);
-    return allocator.alloc(u8, size);
-}
-
 fn fullScreenRectangle(info: SystemInfo) Rectangle {
     return Rectangle{
         .x = 0,
@@ -402,27 +397,35 @@ fn fullScreenRectangle(info: SystemInfo) Rectangle {
     };
 }
 
-fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {    
-    var frame = 
-        try allocateImageBuffer(info.panelWidth, info.panelHeight, 1, c_allocator);
+const PixelArea = struct {
+    rectangle: Rectangle,
+    bitsPerPixel: PixelFormat,
 
+    pub fn byteSize(self: PixelArea) usize {
+        var w = @as(usize, self.rectangle.w);
+        var h = @as(usize, self.rectangle.h);
+        var bpp = @as(usize, self.bitsPerPixel.bits());
+        return (w * h * bpp) / 8;
+    }
+};
+
+fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {    
+    const area = PixelArea{
+        .rectangle = fullScreenRectangle(info),
+        .bitsPerPixel = PixelFormat.bpp4,
+    };
+
+    var frame = try c_allocator.alloc(u8, area.byteSize());
     defer c_allocator.free(frame);
 
     std.mem.set(u8, frame, byte);
 
     try epdWaitForDisplay();
-
-    try epdWrite4BP(
-        frame, 
-        info.memoryAddress,
-        fullScreenRectangle(info),
-        mode,
-    );
-
-    try epdDisplayArea(fullScreenRectangle(info), mode);
+    try epdWrite4BP(area, frame, info.memoryAddress, mode);
+    try epdDisplayArea(area.rectangle, mode);
 }
 
-fn epdWrite4BP(data: []const u8, address: u32, area: Rectangle, mode: u8) !void {
+fn epdWrite4BP(area: PixelArea, data: []const u8, address: u32, mode: u8) !void {
     std.log.info("writing 4bp", .{});
 
     var info = ImageLoadParams{
@@ -432,7 +435,7 @@ fn epdWrite4BP(data: []const u8, address: u32, area: Rectangle, mode: u8) !void 
     };
 
     try epdSetTargetAddress(address);
-    try epdLoadImgAreaStart(info, area);
+    try epdLoadImgAreaStart(info, area.rectangle);
 
     var i: usize = 0;
 

@@ -418,10 +418,10 @@ fn fullScreenRectangle(info: SystemInfo) Rectangle {
 
 fn drawCenteredSquare(info: SystemInfo, color: u4) !void {
     var square = Rectangle{
-        .x = info.panelWidth / 2,
-        .y = info.panelHeight / 2,
-        .w = info.panelWidth / 4,
-        .h = info.panelHeight / 4,
+        .x = info.panelWidth / 4,
+        .y = info.panelHeight / 4,
+        .w = info.panelWidth / 2,
+        .h = info.panelHeight / 2,
     };
 
     var area = PixelArea{

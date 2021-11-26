@@ -386,10 +386,8 @@ fn epdWaitForDisplay() !void {
 fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {
     try epdWaitForDisplay();
 
-    var hmm: bool = info.panelWidth * 4 % 8 == 0;
-
     var width: usize =
-        if (hmm) info.panelWidth * 4 / 8 else info.panelWidth * 4 / 8 + 1;
+        info.panelWidth * 4 / 8;
 
     var size: usize =
         width * @as(usize, info.panelHeight);

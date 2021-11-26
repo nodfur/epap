@@ -441,7 +441,7 @@ fn epdWriteImage(image: Image, address: u32, mode: u8) !void {
 
     var i: usize = 0;
 
-    std.log.info("writing {d} individual words", .{image.data.len});
+    std.log.info("writing {d} individual bytes", .{image.data.len});
 
     while (i * 2 < image.data.len) {
         try epdWriteU16(@as(u16, image.data[i * 2 + 0]) | (@as(u16, image.data[i * 2 + 1]) << 8));

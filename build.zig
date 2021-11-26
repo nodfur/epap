@@ -11,12 +11,18 @@ pub fn build(b: *std.build.Builder) void {
     freetype.addIncludeDir(".");
     freetype.addCSourceFile("freetype.c", &.{});
 
+    const harfbuzz = b.addSharedLibrary("harfbuzz", null, .unversioned);
+    harfbuzz.linkSystemLibrary("c");
+    harfbuzz.linkSystemLibrary("c++");
+    harfbuzz.addIncludeDir("vendor/harfbuzz/src");
+    harfbuzz.addCSourceFile("vendor/harfbuzz/src/harfbuzz.cc", &.{});
+
     const exe = b.addExecutable("epap", "epap.zig");
 
     exe.addIncludeDir("vendor/bcm2835-1.70/src");
     exe.addCSourceFile("vendor/bcm2835-1.70/src/bcm2835.c", &.{"-fno-sanitize=undefined"});
-
     exe.linkLibrary(freetype);
+    exe.linkLibrary(harfbuzz);
     exe.linkSystemLibrary("c");
     exe.setTarget(target);
     exe.setBuildMode(mode);

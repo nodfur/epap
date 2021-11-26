@@ -416,7 +416,7 @@ fn fullScreenRectangle(info: SystemInfo) Rectangle {
     };
 }
 
-fn drawCenteredSquare(info: SystemInfo, color: u16) !void {
+fn drawCenteredSquare(info: SystemInfo, color: u4) !void {
     var square = Rectangle{
         .x = info.panelWidth / 2,
         .y = info.panelHeight / 2,
@@ -432,7 +432,7 @@ fn drawCenteredSquare(info: SystemInfo, color: u16) !void {
     var data = try c_allocator.alloc(u8, area.byteSize());
     defer c_allocator.free(data);
 
-    std.mem.set(u8, data, 0x00);
+    std.mem.set(u8, data, (@as(u8, color) << 4) | color);
 
     var image = Image{
         .area = area,

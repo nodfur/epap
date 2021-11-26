@@ -1,6 +1,8 @@
 const std = @import("std");
 const c = @cImport(@cInclude("bcm2835.h"));
 
+const c_allocator = std.heap.c_allocator;
+
 const Pin = enum (u8) {
     rst = 17,
     cs = 8,
@@ -393,9 +395,9 @@ fn allocateImageBuffer(
 
 fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {    
     var frame = 
-        try allocateImageBuffer(info.panelWidth, info.panelHeight, 1, std.heap.c_allocator);
-        
-    defer std.heap.c_allocator.free(frame);
+        try allocateImageBuffer(info.panelWidth, info.panelHeight, 1, c_allocator);
+
+    defer c_allocator.free(frame);
 
     std.mem.set(u8, frame, byte);
 

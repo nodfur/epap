@@ -393,6 +393,15 @@ fn allocateImageBuffer(
     return allocator.alloc(u8, size);
 }
 
+fn fullScreenRectangle(info: SystemInfo) Rectangle {
+    return Rectangle{
+        .x = 0,
+        .y = 0,
+        .w = info.panelWidth,
+        .h = info.panelHeight,
+    };
+}
+
 fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {    
     var frame = 
         try allocateImageBuffer(info.panelWidth, info.panelHeight, 1, c_allocator);
@@ -406,22 +415,14 @@ fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {
     try epdWrite4BP(
         frame, 
         info.memoryAddress,
-        0, 
-        0, 
-        info.panelWidth, 
-        info.panelHeight, 
+        fullScreenRectangle(info),
         mode,
     );
 
-    try epdDisplayArea(Rectangle{
-        .x = 0,
-        .y = 0,
-        .w = info.panelWidth,
-        .h = info.panelHeight,
-    }, mode);
+    try epdDisplayArea(fullScreenRectangle(info), mode);
 }
 
-fn epdWrite4BP(data: []const u8, address: u32, x: u16, y: u16, width: u16, height: u16, mode: u8) !void {
+fn epdWrite4BP(data: []const u8, address: u32, area: Rectangle, mode: u8) !void {
     std.log.info("writing 4bp", .{});
 
     var info = ImageLoadParams{
@@ -431,27 +432,16 @@ fn epdWrite4BP(data: []const u8, address: u32, x: u16, y: u16, width: u16, heigh
     };
 
     try epdSetTargetAddress(address);
+    try epdLoadImgAreaStart(info, area);
 
-    try epdLoadImgAreaStart(info, Rectangle{
-        .x = x,
-        .y = y,
-        .w = width,
-        .h = height,
-    });
-
-    var length: usize = ((@as(usize, width) * 4 / 8) / 2) * @as(usize, height);
     var i: usize = 0;
 
-    std.log.info("length {d}", .{length});
-
-    dumpMessage("\n<img>");
+    std.log.info("writing {d} individual words", .{data.len});
 
     while (i * 2 < data.len) {
         try epdWriteU16(@as(u16, data[i * 2 + 0]) | (@as(u16, data[i * 2 + 1]) << 8));
         i += 1;
     }
-
-    dumpMessage("</img>\n");
 
     try epdWriteCommand(Commands.load_img_end);
 }

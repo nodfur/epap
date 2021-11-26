@@ -111,6 +111,12 @@ pub fn main() !void {
     try epdClear(info, 0xff, 0);
     delayMs(200);
 
+    try drawCenteredSquare(info, 0x00);
+    delayMs(1000);
+
+    try epdClear(info, 0xff, 0);
+    delayMs(200);
+
     try epdSleep();
 }
 
@@ -408,6 +414,36 @@ fn fullScreenRectangle(info: SystemInfo) Rectangle {
         .w = info.panelWidth,
         .h = info.panelHeight,
     };
+}
+
+fn drawCenteredSquare(info: SystemInfo, color: u16) !void {
+    var square = Rectangle{
+        .x = info.panelWidth / 2,
+        .y = info.panelHeight / 2,
+        .w = info.panelWidth / 4,
+        .h = info.panelHeight / 4,
+    };
+
+    var area = PixelArea{
+        .rectangle = square,
+        .bitsPerPixel = PixelFormat.bpp4,
+    };
+
+    var data = try c_allocator.alloc(u8, area.byteSize());
+    defer c_allocator.free(data);
+
+    std.mem.set(u8, data, 0x00);
+
+    var image = Image{
+        .area = area,
+        .data = data,
+        .endianness = Endianness.little,
+        .rotation = Rotation.normal,
+    };
+
+    try epdWaitForDisplay();
+    try epdWriteImage(image, info.memoryAddress, 2);
+    try epdDisplayArea(area.rectangle, 2);
 }
 
 fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {    

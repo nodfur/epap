@@ -429,12 +429,12 @@ fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {
     };
 
     try epdWaitForDisplay();
-    try epdWrite4BP(image, info.memoryAddress, mode);
+    try epdWriteImage(image, info.memoryAddress, mode);
     try epdDisplayArea(area.rectangle, mode);
 }
 
-fn epdWrite4BP(image: Image, address: u32, mode: u8) !void {
-    std.log.info("writing 4bp", .{});
+fn epdWriteImage(image: Image, address: u32, mode: u8) !void {
+    std.log.info("writing {} image {}", .{image.area.bitsPerPixel, image.area.rectangle});
 
     try epdSetTargetAddress(address);
     try epdLoadImgAreaStart(image);

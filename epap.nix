@@ -1,12 +1,16 @@
-{ stdenv, zig }:
+{ stdenv, zig, harfbuzz, freetype }:
 
 stdenv.mkDerivation {
   name = "epap";
   version = "0.5";
   src = ./.;
-  buildInputs = [zig];
+  buildInputs = [
+    zig harfbuzz freetype
+  ];
+  preBuild = ''
+    export HOME=$TMPDIR
+  '';
   installPhase = ''
-    mkdir $out/bin
-    cp epap $out/bin
+    zig build --prefix $out install
   '';
 }

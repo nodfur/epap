@@ -1,12 +1,10 @@
-{ stdenv, zig, harfbuzz, freetype }:
+{ stdenv, zig }:
 
 stdenv.mkDerivation {
   name = "epap";
   version = "0.5";
   src = ./.;
-  buildInputs = [
-    zig harfbuzz freetype
-  ];
+  buildInputs = [zig];
   preBuild = ''
     export HOME=$TMPDIR
   '';

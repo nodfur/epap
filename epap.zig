@@ -416,14 +416,14 @@ fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {
         .bitsPerPixel = PixelFormat.bpp4,
     };
 
-    var frame = try c_allocator.alloc(u8, area.byteSize());
-    defer c_allocator.free(frame);
+    var data = try c_allocator.alloc(u8, area.byteSize());
+    defer c_allocator.free(data);
 
-    std.mem.set(u8, frame, byte);
+    std.mem.set(u8, data, byte);
 
     var image = Image{
         .area = area,
-        .data = frame,
+        .data = data,
         .endianness = Endianness.little,
         .rotation = Rotation.normal,
     };

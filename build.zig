@@ -21,8 +21,13 @@ pub fn build(b: *std.build.Builder) void {
 
     exe.addIncludeDir("vendor/bcm2835-1.70/src");
     exe.addCSourceFile("vendor/bcm2835-1.70/src/bcm2835.c", &.{"-fno-sanitize=undefined"});
+
+    exe.addIncludeDir("vendor/freetype/include");
     exe.linkLibrary(freetype);
+
+    exe.addIncludeDir("vendor/harfbuzz/src");
     exe.linkLibrary(harfbuzz);
+
     exe.linkSystemLibrary("c");
     exe.setTarget(target);
     exe.setBuildMode(mode);

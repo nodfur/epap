@@ -57,7 +57,7 @@ const PixelFormat = enum(u2) {
     bpp4 = 2,
     bpp8 = 3,
 
-    pub fn bits(self: PixelFormat) usize {
+    pub fn bits(self: PixelFormat) u8 {
         return switch (self) {
             PixelFormat.bpp2 => 2,
             PixelFormat.bpp3 => 3,
@@ -74,17 +74,30 @@ const Rotation = enum(u2) {
     rotate_270 = 3,
 };
 
-const ImageLoadParams = struct {
-    endianness: Endianness,
-    pixel_format: PixelFormat,
-    rotation: Rotation,
-};
-
 const Rectangle = struct {
     x: u16,
     y: u16,
     w: u16,
     h: u16,
+};
+
+const PixelArea = struct {
+    rectangle: Rectangle,
+    bitsPerPixel: PixelFormat,
+
+    pub fn byteSize(self: PixelArea) usize {
+        var w = @as(usize, self.rectangle.w);
+        var h = @as(usize, self.rectangle.h);
+        var bpp = @as(usize, self.bitsPerPixel.bits());
+        return (w * h * bpp) / 8;
+    }
+};
+
+const Image = struct {
+    area: PixelArea,
+    data: []const u8,
+    endianness: Endianness,
+    rotation: Rotation,
 };
 
 pub fn main() !void {
@@ -397,18 +410,6 @@ fn fullScreenRectangle(info: SystemInfo) Rectangle {
     };
 }
 
-const PixelArea = struct {
-    rectangle: Rectangle,
-    bitsPerPixel: PixelFormat,
-
-    pub fn byteSize(self: PixelArea) usize {
-        var w = @as(usize, self.rectangle.w);
-        var h = @as(usize, self.rectangle.h);
-        var bpp = @as(usize, self.bitsPerPixel.bits());
-        return (w * h * bpp) / 8;
-    }
-};
-
 fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {    
     const area = PixelArea{
         .rectangle = fullScreenRectangle(info),
@@ -420,29 +421,30 @@ fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {
 
     std.mem.set(u8, frame, byte);
 
-    try epdWaitForDisplay();
-    try epdWrite4BP(area, frame, info.memoryAddress, mode);
-    try epdDisplayArea(area.rectangle, mode);
-}
-
-fn epdWrite4BP(area: PixelArea, data: []const u8, address: u32, mode: u8) !void {
-    std.log.info("writing 4bp", .{});
-
-    var info = ImageLoadParams{
+    var image = Image{
+        .area = area,
+        .data = frame,
         .endianness = Endianness.little,
-        .pixel_format = PixelFormat.bpp4,
         .rotation = Rotation.normal,
     };
 
+    try epdWaitForDisplay();
+    try epdWrite4BP(image, info.memoryAddress, mode);
+    try epdDisplayArea(area.rectangle, mode);
+}
+
+fn epdWrite4BP(image: Image, address: u32, mode: u8) !void {
+    std.log.info("writing 4bp", .{});
+
     try epdSetTargetAddress(address);
-    try epdLoadImgAreaStart(info, area.rectangle);
+    try epdLoadImgAreaStart(image);
 
     var i: usize = 0;
 
-    std.log.info("writing {d} individual words", .{data.len});
+    std.log.info("writing {d} individual words", .{image.data.len});
 
-    while (i * 2 < data.len) {
-        try epdWriteU16(@as(u16, data[i * 2 + 0]) | (@as(u16, data[i * 2 + 1]) << 8));
+    while (i * 2 < image.data.len) {
+        try epdWriteU16(@as(u16, image.data[i * 2 + 0]) | (@as(u16, image.data[i * 2 + 1]) << 8));
         i += 1;
     }
 
@@ -466,18 +468,18 @@ fn epdSetTargetAddress(address: u32) !void {
     try epdWriteRegister(Registers.lisar0, addressLow);
 }
 
-fn epdLoadImgAreaStart(info: ImageLoadParams, rect: Rectangle) !void {
+fn epdLoadImgAreaStart(image: Image) !void {
     var format: u16 =
-        (@as(u16, @enumToInt(info.endianness)) << 8) | 
-        (@as(u16, @enumToInt(info.pixel_format)) << 4) | 
-        @as(u16, @enumToInt(info.rotation));
+        (@as(u16, @enumToInt(image.endianness)) << 8) | 
+        (image.area.bitsPerPixel.bits() << 4) | 
+        @as(u16, @enumToInt(image.rotation));
 
     var args = [_]u16{
         format,
-        rect.x,
-        rect.y,
-        rect.w,
-        rect.h,
+        image.area.rectangle.x,
+        image.area.rectangle.y,
+        image.area.rectangle.w,
+        image.area.rectangle.h,
     };
 
     try epdWriteCommand(Commands.load_img_area_start);

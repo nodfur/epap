@@ -381,13 +381,18 @@ fn byteSizeForImage(width: u16, height: u16, bitsPerPixel: u8) usize {
     return (@as(usize, width) * @as(usize, height) * @as(usize, bitsPerPixel)) / 8;
 }
 
-fn allocateImageArray(width: u16, height: u16, bitsPerPixel: u8, allocator: *std.mem.Allocator) ![]u8 {
+fn allocateImageBuffer(
+    width: u16, 
+    height: u16, 
+    bitsPerPixel: u8, 
+    allocator: *std.mem.Allocator,
+) ![]u8 {
     var size = byteSizeForImage(width, height, bitsPerPixel);
     return allocator.alloc(u8, size);
 }
 
 fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {    
-    var frame = try allocateImageArray(info.panelWidth, info.panelHeight, 1, std.heap.c_allocator);
+    var frame = try allocateImageBuffer(info.panelWidth, info.panelHeight, 1, std.heap.c_allocator);
     defer std.heap.c_allocator.free(frame);
 
     std.mem.set(u8, frame, byte);

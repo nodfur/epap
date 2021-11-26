@@ -392,7 +392,9 @@ fn allocateImageBuffer(
 }
 
 fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {    
-    var frame = try allocateImageBuffer(info.panelWidth, info.panelHeight, 1, std.heap.c_allocator);
+    var frame = 
+        try allocateImageBuffer(info.panelWidth, info.panelHeight, 1, std.heap.c_allocator);
+        
     defer std.heap.c_allocator.free(frame);
 
     std.mem.set(u8, frame, byte);

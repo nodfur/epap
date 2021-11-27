@@ -38,10 +38,22 @@ pub fn loadFace(path: [*:0]const u8) !ft.FT_Face {
   return face;
 }
 
+pub fn setPixelSizes(face: ft.FT_Face, height: u32) !void {
+  var err = ft.FT_Set_Pixel_Sizes(face, 0, height);
+
+  if (err != 0) {
+    std.log.err("freetype: {s}", .{ft.FT_Error_String(err)});
+    return error.freetype_error;
+  }
+
+  std.log.debug("freetype: set pixel size to {d}", .{height});
+}
+
 pub fn main() !void {
   try init();
 
   var face = try loadFace("fonts/cozette.otb");
+  try setPixelSizes(face, 13);
 
   try done();
 }

@@ -18,7 +18,7 @@ pub fn build(b: *std.build.Builder) void {
     harfbuzz.addIncludeDir("vendor/harfbuzz/src");
     harfbuzz.addCSourceFile(
         "vendor/harfbuzz/src/harfbuzz.cc",
-        &.{"-DHAVE_FREETYPE"},
+        &.{"-DHAVE_FREETYPE", "-fno-sanitize=undefined"},
     );
 
     const epap = b.addExecutable("epap", "epap.zig");

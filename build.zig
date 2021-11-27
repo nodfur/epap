@@ -14,8 +14,12 @@ pub fn build(b: *std.build.Builder) void {
     const harfbuzz = b.addStaticLibrary("harfbuzz", null);
     harfbuzz.linkSystemLibrary("c");
     harfbuzz.linkSystemLibrary("c++");
+    harfbuzz.addIncludeDir("vendor/freetype/include");
     harfbuzz.addIncludeDir("vendor/harfbuzz/src");
-    harfbuzz.addCSourceFile("vendor/harfbuzz/src/harfbuzz.cc", &.{});
+    harfbuzz.addCSourceFile(
+        "vendor/harfbuzz/src/harfbuzz.cc",
+        &.{"-DHAVE_FREETYPE"},
+    );
 
     const epap = b.addExecutable("epap", "epap.zig");
     const epap_ft = b.addExecutable("epap-ft", "freetype.zig");

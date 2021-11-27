@@ -9,7 +9,7 @@ pub fn build(b: *std.build.Builder) void {
     freetype.addIncludeDir("vendor/freetype/include");
     freetype.addIncludeDir("vendor/freetype/src");
     freetype.addIncludeDir(".");
-    freetype.addCSourceFile("freetype.c", &.{});
+    freetype.addCSourceFile("freetype.c", &.{"-fno-sanitize=undefined"});
 
     const harfbuzz = b.addStaticLibrary("harfbuzz", null);
     harfbuzz.linkSystemLibrary("c");

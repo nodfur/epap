@@ -17,28 +17,29 @@ pub fn build(b: *std.build.Builder) void {
     harfbuzz.addIncludeDir("vendor/harfbuzz/src");
     harfbuzz.addCSourceFile("vendor/harfbuzz/src/harfbuzz.cc", &.{});
 
-    const exe = b.addExecutable("epap", "epap.zig");
+    const epap = b.addExecutable("epap", "epap.zig");
+    const epap_ft = b.addExecutable("epap-ft", "freetype.zig");
 
-    exe.addIncludeDir("vendor/bcm2835-1.70/src");
-    exe.addCSourceFile("vendor/bcm2835-1.70/src/bcm2835.c", &.{"-fno-sanitize=undefined"});
+    epap.addIncludeDir("vendor/bcm2835-1.70/src");
+    epap.addCSourceFile("vendor/bcm2835-1.70/src/bcm2835.c", &.{"-fno-sanitize=undefined"});
 
-    exe.addIncludeDir("vendor/freetype/include");
-    exe.linkLibrary(freetype);
+    epap.addIncludeDir("vendor/freetype/include");
+    epap.addIncludeDir("vendor/harfbuzz/src");
+    epap.linkLibrary(freetype);
+    epap.linkLibrary(harfbuzz);
 
-    exe.addIncludeDir("vendor/harfbuzz/src");
-    exe.linkLibrary(harfbuzz);
+    epap.linkSystemLibrary("c");
+    epap.setTarget(target);
+    epap.setBuildMode(mode);
+    epap.install();
 
-    exe.linkSystemLibrary("c");
-    exe.setTarget(target);
-    exe.setBuildMode(mode);
-    exe.install();
+    epap_ft.addIncludeDir("vendor/freetype/include");
+    epap_ft.addIncludeDir("vendor/harfbuzz/src");
+    epap_ft.linkLibrary(freetype);
+    epap_ft.linkLibrary(harfbuzz);
 
-    const run_cmd = exe.run();
-    run_cmd.step.dependOn(b.getInstallStep());
-    if (b.args) |args| {
-        run_cmd.addArgs(args);
-    }
-
-    const run_step = b.step("run", "Run the app");
-    run_step.dependOn(&run_cmd.step);
+    epap_ft.linkSystemLibrary("c");
+    epap_ft.setTarget(target);
+    epap_ft.setBuildMode(mode);
+    epap_ft.install();
 }

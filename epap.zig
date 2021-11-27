@@ -1,9 +1,10 @@
 const std = @import("std");
-const c = @cImport(@cInclude("bcm2835.h"));
+const bcm2835 = @cImport(@cInclude("bcm2835.h"));
+const freetype = @import("./freetype.zig");
 
 const c_allocator = std.heap.c_allocator;
 
-const Pin = enum (u8) {
+const Pin = enum(u8) {
     rst = 17,
     cs = 8,
     busy = 24,
@@ -106,6 +107,8 @@ pub fn main() !void {
         exit() catch |err| std.log.err("BCM2835 exit failed", .{});
     }
 
+    try freetype.init();
+
     var info = try epdInit(-1.73);
 
     try epdClear(info, 0xff, 0);
@@ -123,17 +126,17 @@ pub fn main() !void {
 fn init() !void {
     std.log.info("starting BCM2835", .{});
 
-    if (c.bcm2835_init() == 0) {
+    if (bcm2835.bcm2835_init() == 0) {
         return error.bcm2835_init_failed;
     }
 
-    if (c.bcm2835_spi_begin() == 0) {
+    if (bcm2835.bcm2835_spi_begin() == 0) {
         return error.bcm2835_spi_failed;
     }
 
-    c.bcm2835_spi_setBitOrder(c.BCM2835_SPI_BIT_ORDER_MSBFIRST);
-    c.bcm2835_spi_setDataMode(c.BCM2835_SPI_MODE0);
-    c.bcm2835_spi_setClockDivider(c.BCM2835_SPI_CLOCK_DIVIDER_32);
+    bcm2835.bcm2835_spi_setBitOrder(bcm2835.BCM2835_SPI_BIT_ORDER_MSBFIRST);
+    bcm2835.bcm2835_spi_setDataMode(bcm2835.BCM2835_SPI_MODE0);
+    bcm2835.bcm2835_spi_setClockDivider(bcm2835.BCM2835_SPI_CLOCK_DIVIDER_32);
 
     gpioInit();
 }
@@ -141,64 +144,61 @@ fn init() !void {
 fn exit() !void {
     std.log.info("closing BCM2835", .{});
 
-    gpioWriteBit(Pin.cs, c.LOW);
-    gpioWriteBit(Pin.rst, c.LOW);
+    gpioWriteBit(Pin.cs, bcm2835.LOW);
+    gpioWriteBit(Pin.rst, bcm2835.LOW);
 
-    c.bcm2835_spi_end();
+    bcm2835.bcm2835_spi_end();
 
-    if (c.bcm2835_close() == 0) {
+    if (bcm2835.bcm2835_close() == 0) {
         return error.bcm2835_exit_failed;
     }
 }
 
 fn gpioMode(pin: Pin, mode: u16) void {
-    c.bcm2835_gpio_fsel(
-        @enumToInt(pin),
-        if (mode == 0 or mode == c.BCM2835_GPIO_FSEL_INPT)
-            c.BCM2835_GPIO_FSEL_INPT
-        else
-            c.BCM2835_GPIO_FSEL_OUTP
-    );
+    bcm2835.bcm2835_gpio_fsel(@enumToInt(pin), if (mode == 0 or mode == bcm2835.BCM2835_GPIO_FSEL_INPT)
+        bcm2835.BCM2835_GPIO_FSEL_INPT
+    else
+        bcm2835.BCM2835_GPIO_FSEL_OUTP);
 }
 
 fn gpioInit() void {
     std.log.info("starting GPIO", .{});
-    gpioMode(Pin.rst, c.BCM2835_GPIO_FSEL_OUTP);
-    gpioMode(Pin.cs, c.BCM2835_GPIO_FSEL_OUTP);
-    gpioMode(Pin.busy, c.BCM2835_GPIO_FSEL_INPT);
+    gpioMode(Pin.rst, bcm2835.BCM2835_GPIO_FSEL_OUTP);
+    gpioMode(Pin.cs, bcm2835.BCM2835_GPIO_FSEL_OUTP);
+    gpioMode(Pin.busy, bcm2835.BCM2835_GPIO_FSEL_INPT);
 
-    gpioWriteBit(Pin.cs, c.HIGH);
+    gpioWriteBit(Pin.cs, bcm2835.HIGH);
 }
 
 fn gpioWriteBit(pin: Pin, value: u8) void {
-    c.bcm2835_gpio_write(@enumToInt(pin), value);
+    bcm2835.bcm2835_gpio_write(@enumToInt(pin), value);
 }
 
 fn gpioReadBit(pin: Pin) u8 {
-    return c.bcm2835_gpio_lev(@enumToInt(pin));
+    return bcm2835.bcm2835_gpio_lev(@enumToInt(pin));
 }
 
 fn delayMs(ms: c_uint) void {
-    c.bcm2835_delay(ms);
+    bcm2835.bcm2835_delay(ms);
 }
 
 fn delayUs(us: u64) void {
-    c.bcm2835_delayMicroseconds(us);
+    bcm2835.bcm2835_delayMicroseconds(us);
 }
 
 fn epdReset() void {
     std.log.info("resetting EPD", .{});
-    gpioWriteBit(Pin.rst, c.HIGH);
+    gpioWriteBit(Pin.rst, bcm2835.HIGH);
     delayMs(200);
-    gpioWriteBit(Pin.rst, c.LOW);
+    gpioWriteBit(Pin.rst, bcm2835.LOW);
     delayMs(10);
-    gpioWriteBit(Pin.rst, c.HIGH);
+    gpioWriteBit(Pin.rst, bcm2835.HIGH);
     delayMs(200);
 }
 
 fn spiWriteByte(byte: u8) void {
-    _ = c.bcm2835_spi_transfer(byte);
-    // std.io.getStdOut().writer().print("{x:0>2}", .{byte}) catch |err| 
+    _ = bcm2835.bcm2835_spi_transfer(byte);
+    // std.io.getStdOut().writer().print("{x:0>2}", .{byte}) catch |err|
     //     std.log.err("spiWriteByte failed {}", .{err});
 }
 
@@ -208,11 +208,11 @@ fn spiWriteWord(word: u16) !void {
 }
 
 fn gpioLow(pin: Pin) void {
-    gpioWriteBit(pin, c.LOW);
+    gpioWriteBit(pin, bcm2835.LOW);
 }
 
 fn gpioHigh(pin: Pin) void {
-    gpioWriteBit(pin, c.HIGH);
+    gpioWriteBit(pin, bcm2835.HIGH);
 }
 
 fn csLow() void {
@@ -233,7 +233,6 @@ fn wait() void {
     }
 }
 
-
 fn epdStartPacket(kind: PacketType) !void {
     wait();
     csLow();
@@ -242,7 +241,7 @@ fn epdStartPacket(kind: PacketType) !void {
 }
 
 fn epdWriteCommand(command: Commands) !void {
-    std.log.info("cmd {x} {x}", .{@enumToInt(command), command});
+    std.log.info("cmd {x} {x}", .{ @enumToInt(command), command });
     dumpMessage("\n");
     try epdStartPacket(PacketType.command);
     defer csHigh();
@@ -275,7 +274,7 @@ fn epdWriteMultiArg(data: []u16) !void {
 }
 
 fn spiReadByte() u8 {
-    return c.bcm2835_spi_transfer(0x00);
+    return bcm2835.bcm2835_spi_transfer(0x00);
 }
 
 fn spiReadWord() u16 {
@@ -380,7 +379,7 @@ fn epdSetVcom(vcom: f64) !void {
     try epdWriteU16(0);
     var read_vcom: u16 = try epdReadWord();
 
-    std.log.info("setting vcom from 0x{x} to {d} (0x{x})", .{read_vcom, vcom, vcom_word});
+    std.log.info("setting vcom from 0x{x} to {d} (0x{x})", .{ read_vcom, vcom, vcom_word });
 
     try epdWriteCommand(Commands.vcom);
     try epdWriteU16(1);
@@ -446,7 +445,7 @@ fn drawCenteredSquare(info: SystemInfo, color: u4) !void {
     try epdDisplayArea(area.rectangle, 2);
 }
 
-fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {    
+fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {
     const area = PixelArea{
         .rectangle = fullScreenRectangle(info),
         .bitsPerPixel = PixelFormat.bpp4,
@@ -470,7 +469,7 @@ fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {
 }
 
 fn epdWriteImage(image: Image, address: u32, mode: u8) !void {
-    std.log.info("writing {} image {}", .{image.area.bitsPerPixel, image.area.rectangle});
+    std.log.info("writing {} image {}", .{ image.area.bitsPerPixel, image.area.rectangle });
 
     try epdSetTargetAddress(address);
     try epdLoadImgAreaStart(image);
@@ -493,7 +492,7 @@ fn dumpMessage(msg: []const u8) void {
 
 fn writeStdout(msg: []const u8) void {
     _ = std.io.getStdOut().writer().writeAll(msg) catch |err| {
-        std.log.err("error writing to stdout: {s}", .{err}); 
+        std.log.err("error writing to stdout: {s}", .{err});
     };
 }
 
@@ -506,8 +505,8 @@ fn epdSetTargetAddress(address: u32) !void {
 
 fn epdLoadImgAreaStart(image: Image) !void {
     var format: u16 =
-        (@as(u16, @enumToInt(image.endianness)) << 8) | 
-        (image.area.bitsPerPixel.bits() << 4) | 
+        (@as(u16, @enumToInt(image.endianness)) << 8) |
+        (image.area.bitsPerPixel.bits() << 4) |
         @as(u16, @enumToInt(image.rotation));
 
     var args = [_]u16{

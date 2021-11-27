@@ -1,7 +1,8 @@
 const std = @import("std");
-const _ = @cImport(@cInclude("ft2build.h"));
 const c = @cImport({
+    @cInclude("ft2build.h");
     @cInclude("freetype/freetype.h");
+    @cInclude("freetype/ftglyph.h");
     @cInclude("hb-ft.h");
 });
 
@@ -86,7 +87,7 @@ pub fn main() !void {
     c.hb_buffer_set_direction(buffer, .HB_DIRECTION_LTR);
     c.hb_buffer_set_script(buffer, .HB_SCRIPT_LATIN);
     c.hb_buffer_set_language(buffer, c.hb_language_from_string("en", -1));
-    c.hb_buffer_add_utf8(buffer, "Hello, World!", -1, 0, -1);
+    c.hb_buffer_add_utf8(buffer, "ieva", -1, 0, -1);
 
     std.log.debug("harfbuzz: added text", .{});
 
@@ -130,16 +131,37 @@ pub fn main() !void {
             return error.freetype_error;
         }
 
-        std.log.debug("freetype: loaded glyph format {d}", .{font.freetype.*.glyph.*.format});
+        // std.log.debug("freetype: loaded glyph {any}", .{font.freetype.*.glyph.*.bitmap});
 
-        var bitmap = font.freetype.*.glyph.*.bitmap;
-        std.log.debug("freetype: loaded glyph bitmap {any}", .{
-            .{bitmap},
-        });
+        try printGlyph(font.freetype.*.glyph.*.bitmap);
 
         x += x_advance;
         y += y_advance;
     }
 
     try done();
+}
+
+pub fn printGlyph(glyph: c.FT_Bitmap) !void {
+    var width = glyph.width;
+    var height = glyph.rows;
+    var pitch: u32 = 1;
+    var buffer = glyph.buffer;
+
+    var i: u32 = 0;
+    while (i < height) : (i += 1) {
+        var j: u32 = 0;
+        while (j < width) : (j += 1) {
+            var pixel = buffer[i * pitch + @divTrunc(j, 8)];
+            var bit: u32 = @as(u32, 1) << (7 - @truncate(u4, (j % 8)));
+            if (pixel & bit != 0) {
+                _ = try std.io.getStdOut().write("#");
+            } else {
+                _ = try std.io.getStdOut().write(" ");
+            }
+        }
+        _ = try std.io.getStdOut().write("\n");
+    }
+
+    _ = try std.io.getStdOut().write("\n");
 }

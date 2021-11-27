@@ -132,6 +132,11 @@ pub fn main() !void {
 
         std.log.debug("freetype: loaded glyph format {d}", .{font.freetype.*.glyph.*.format});
 
+        var bitmap = font.freetype.*.glyph.*.bitmap;
+        std.log.debug("freetype: loaded glyph bitmap {any}", .{
+            .{bitmap},
+        });
+
         x += x_advance;
         y += y_advance;
     }

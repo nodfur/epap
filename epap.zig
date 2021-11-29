@@ -1,6 +1,6 @@
 const std = @import("std");
 const bcm2835 = @cImport(@cInclude("bcm2835.h"));
-const freetype = @import("./freetype.zig");
+const text = @import("./freetype.zig");
 
 const c_allocator = std.heap.c_allocator;
 
@@ -96,7 +96,7 @@ const PixelArea = struct {
 
 const Image = struct {
     area: PixelArea,
-    data: []const u8,
+    data: [*]const u8,
     endianness: Endianness,
     rotation: Rotation,
 };
@@ -107,15 +107,31 @@ pub fn main() !void {
         exit() catch |err| std.log.err("BCM2835 exit failed", .{});
     }
 
-    try freetype.init();
+    try text.init();
+
+    var fontPath = "fonts/DMMono-Regular.ttf";
+    var fontHeight: u32 = 24;
+
+    try text.init();
 
     var info = try epdInit(-1.73);
+
+    var frame: []u4 =
+        try std.heap.c_allocator.alloc(u4, info.panelHeight * info.panelWidth);
+
+    defer std.heap.c_allocator.free(frame);
+
+    std.mem.set(u4, frame, 0xf);
+
+    var font = try text.loadFont(fontPath, fontHeight);
+
+    try text.renderText(u4, 0, font, "foo bar (void &*[]~) { 1 + 2 + 3 = 6; }", frame, info.panelWidth, info.panelHeight, 40, 40);
+    try text.done();
 
     try epdClear(info, 0xff, 0);
     delayMs(200);
 
-    try drawCenteredSquare(info, 0x00);
-    delayMs(1000);
+    try epdDrawFrame(info, @ptrCast([*]u4, frame));
 
     try epdClear(info, 0xff, 0);
     delayMs(200);
@@ -445,6 +461,20 @@ fn drawCenteredSquare(info: SystemInfo, color: u4) !void {
     try epdDisplayArea(area.rectangle, 2);
 }
 
+fn epdDrawFrame(info: SystemInfo, frame: [*]const u4) !void {
+    var area = PixelArea{
+        .rectangle = fullScreenRectangle(info),
+        .bitsPerPixel = PixelFormat.bpp4,
+    };
+
+    var image = Image{
+        .area = area,
+        .data = @ptrCast([*]const u8, frame),
+        .endianness = Endianness.little,
+        .rotation = Rotation.normal,
+    };
+}
+
 fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {
     const area = PixelArea{
         .rectangle = fullScreenRectangle(info),
@@ -458,7 +488,7 @@ fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {
 
     var image = Image{
         .area = area,
-        .data = data,
+        .data = @ptrCast([*]const u8, data),
         .endianness = Endianness.little,
         .rotation = Rotation.normal,
     };
@@ -476,9 +506,11 @@ fn epdWriteImage(image: Image, address: u32, mode: u8) !void {
 
     var i: usize = 0;
 
-    std.log.info("writing {d} individual bytes", .{image.data.len});
+    var length = image.area.byteSize();
 
-    while (i * 2 < image.data.len) {
+    std.log.info("writing {d} individual bytes", .{length});
+
+    while (i * 2 < length) {
         try epdWriteU16(@as(u16, image.data[i * 2 + 0]) | (@as(u16, image.data[i * 2 + 1]) << 8));
         i += 1;
     }

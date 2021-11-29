@@ -82,12 +82,12 @@ pub fn main() !void {
 
     var font = try loadFont(fontPath, fontHeight);
 
-    try renderText(font, "foo bar (void &*[]~) { 1 + 2 + 3 = 6; }", frame, screenWidth, screenHeight, 40, 40);
+    try renderText(u1, 1, font, "foo bar (void &*[]~) { 1 + 2 + 3 = 6; }", frame, screenWidth, screenHeight, 40, 40);
     try bitArrayToPBM(frame, screenWidth, screenHeight, "frame.pbm");
     try done();
 }
 
-pub fn renderText(font: Font, text: [*:0]const u8, frame: []u1, screenWidth: u32, screenHeight: u32, x0: i32, y0: i32) !void {
+pub fn renderText(comptime pixel_type: type, black: pixel_type, font: Font, text: [*:0]const u8, frame: []pixel_type, screenWidth: u32, screenHeight: u32, x0: i32, y0: i32) !void {
     var buffer: *c.hb_buffer_t =
         @ptrCast(*c.hb_buffer_t, c.hb_buffer_create());
 
@@ -151,6 +151,8 @@ pub fn renderText(font: Font, text: [*:0]const u8, frame: []u1, screenWidth: u32
         }
 
         try drawGlyph(
+            pixel_type,
+            black,
             frame,
             screenWidth,
             @intCast(u32, x + @divTrunc(x_offset, 64)),
@@ -187,7 +189,7 @@ pub fn bitArrayToPBM(
     }
 }
 
-pub fn drawGlyph(frame: []u1, screenWidth: u32, x: u32, y: u32, bitmap: c.FT_Bitmap, lineHeight: u32, extents: c.hb_glyph_extents_t) !void {
+pub fn drawGlyph(comptime pixel_type: type, black: pixel_type, frame: []pixel_type, screenWidth: u32, x: u32, y: u32, bitmap: c.FT_Bitmap, lineHeight: u32, extents: c.hb_glyph_extents_t) !void {
     var width = bitmap.width;
     var height = bitmap.rows;
     var pitch: u32 = @intCast(u32, bitmap.pitch);
@@ -202,7 +204,7 @@ pub fn drawGlyph(frame: []u1, screenWidth: u32, x: u32, y: u32, bitmap: c.FT_Bit
             var yOrigin = @intCast(u32, @divTrunc(extents.y_bearing, 64));
             var xOrigin = @intCast(u32, @divTrunc(extents.x_bearing, 64));
             if (pixel & bit != 0) {
-                frame[((lineHeight - yOrigin) / 2 + y + i) * screenWidth + x + xOrigin + j] = 1;
+                frame[((lineHeight - yOrigin) + y + i) * screenWidth + x + xOrigin + j] = black;
             }
         }
     }

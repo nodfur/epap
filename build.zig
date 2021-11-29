@@ -18,11 +18,16 @@ pub fn build(b: *std.build.Builder) void {
     harfbuzz.addIncludeDir("vendor/harfbuzz/src");
     harfbuzz.addCSourceFile(
         "vendor/harfbuzz/src/harfbuzz.cc",
-        &.{"-DHAVE_FREETYPE", "-fno-sanitize=undefined"},
+        &.{ "-DHAVE_FREETYPE", "-fno-sanitize=undefined" },
     );
 
     const epap = b.addExecutable("epap", "epap.zig");
     const epap_ft = b.addExecutable("epap-ft", "freetype.zig");
+
+    freetype.setTarget(target);
+    harfbuzz.setTarget(target);
+    epap.setTarget(target);
+    epap_ft.setTarget(target);
 
     epap.addIncludeDir("vendor/bcm2835-1.70/src");
     epap.addCSourceFile("vendor/bcm2835-1.70/src/bcm2835.c", &.{"-fno-sanitize=undefined"});
@@ -33,7 +38,6 @@ pub fn build(b: *std.build.Builder) void {
     epap.linkLibrary(harfbuzz);
 
     epap.linkSystemLibrary("c");
-    epap.setTarget(target);
     epap.setBuildMode(mode);
     epap.install();
 
@@ -43,7 +47,6 @@ pub fn build(b: *std.build.Builder) void {
     epap_ft.linkLibrary(harfbuzz);
 
     epap_ft.linkSystemLibrary("c");
-    epap_ft.setTarget(target);
     epap_ft.setBuildMode(mode);
     epap_ft.install();
 }

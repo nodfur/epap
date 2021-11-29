@@ -127,7 +127,7 @@ pub fn main() !void {
 
     std.log.info("setting bitmap to 0x1", .{});
 
-    std.mem.set(u1, frame, 0x1);
+    std.mem.set(u1, frame, 0x0);
 
     // var font = try text.loadFont(fontPath, fontHeight);
 

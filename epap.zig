@@ -117,7 +117,7 @@ pub fn main() !void {
     var info = try epdInit(-1.73);
 
     var frame: []u4 =
-        try std.heap.c_allocator.alloc(u4, info.panelHeight * info.panelWidth);
+        try std.heap.c_allocator.alloc(u4, @as(u32, info.panelHeight) * @as(u32, info.panelWidth));
 
     defer std.heap.c_allocator.free(frame);
 

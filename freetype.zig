@@ -8,34 +8,26 @@ const c = @cImport({
 
 var library: c.FT_Library = null;
 
-pub fn init() !void {
-    var err = c.FT_Init_FreeType(&library);
-
+fn checkFreetypeError(err: c_int) !void {
     if (err != 0) {
+        std.log.err("freetype: {s}", .{c.FT_Error_String(err)});
         return error.freetype_error;
     }
+}
 
+pub fn init() !void {
+    try checkFreetypeError(c.FT_Init_FreeType(&library));
     std.log.debug("freetype: initialized library", .{});
 }
 
 pub fn done() !void {
-    var err = c.FT_Done_FreeType(library);
-
-    if (err != 0) {
-        return error.freetype_error;
-    }
-
+    try checkFreetypeError(c.FT_Done_FreeType(library));
     std.log.debug("freetype: closed library", .{});
 }
 
 pub fn loadFreetypeFace(path: [*:0]const u8) !c.FT_Face {
     var face: c.FT_Face = null;
-    var err = c.FT_New_Face(library, path, 0, &face);
-
-    if (err != 0) {
-        std.log.err("freetype: {s}", .{c.FT_Error_String(err)});
-        return error.freetype_error;
-    }
+    try checkFreetypeError(c.FT_New_Face(library, path, 0, &face));
 
     std.log.debug("freetype: loaded {s}", .{path});
 
@@ -43,13 +35,7 @@ pub fn loadFreetypeFace(path: [*:0]const u8) !c.FT_Face {
 }
 
 pub fn setPixelSizes(face: c.FT_Face, height: u32) !void {
-    var err = c.FT_Set_Pixel_Sizes(face, 0, height);
-
-    if (err != 0) {
-        std.log.err("freetype: {s}", .{c.FT_Error_String(err)});
-        return error.freetype_error;
-    }
-
+    try checkFreetypeError(c.FT_Set_Pixel_Sizes(face, 0, height));
     std.log.debug("freetype: set pixel size to {d}", .{height});
 }
 
@@ -62,7 +48,8 @@ pub fn loadFont(path: [*:0]const u8, height: u32) !Font {
     var freetype = try loadFreetypeFace(path);
     try setPixelSizes(freetype, height);
 
-    var harfbuzz = @ptrCast(*c.hb_font_t, c.hb_ft_font_create_referenced(freetype));
+    var harfbuzz =
+        @ptrCast(*c.hb_font_t, c.hb_ft_font_create_referenced(freetype));
 
     c.hb_ft_font_set_funcs(harfbuzz);
 
@@ -74,20 +61,33 @@ pub fn loadFont(path: [*:0]const u8, height: u32) !Font {
     };
 }
 
+var screenWidth: u32 = 800;
+var screenHeight: u32 = 600;
+
+var fontPath = "fonts/cozette.bdf";
+var fontHeight: u32 = 13;
+
 pub fn main() !void {
     try init();
 
-    var font = try loadFont("fonts/cozette.otb", 13);
+    var font = try loadFont(fontPath, fontHeight);
 
     var buffer: *c.hb_buffer_t =
         @ptrCast(*c.hb_buffer_t, c.hb_buffer_create());
+
+    var frame: []u1 =
+        try std.heap.c_allocator.alloc(u1, screenHeight * screenWidth);
+
+    defer std.heap.c_allocator.free(frame);
+
+    std.mem.set(u1, frame, 0);
 
     std.log.debug("harfbuzz: created buffer", .{});
 
     c.hb_buffer_set_direction(buffer, .HB_DIRECTION_LTR);
     c.hb_buffer_set_script(buffer, .HB_SCRIPT_LATIN);
     c.hb_buffer_set_language(buffer, c.hb_language_from_string("en", -1));
-    c.hb_buffer_add_utf8(buffer, "ieva", -1, 0, -1);
+    c.hb_buffer_add_utf8(buffer, "foo bar () { 1 + 2 = 4; }", -1, 0, -1);
 
     std.log.debug("harfbuzz: added text", .{});
 
@@ -98,17 +98,19 @@ pub fn main() !void {
     var glyph_count: u32 = 0;
 
     var glyph_info =
-        @ptrCast([*]c.hb_glyph_info_t, c.hb_buffer_get_glyph_infos(buffer, &glyph_count));
-
-    std.log.debug("harfbuzz: got glyph info", .{});
+        @ptrCast(
+            [*]c.hb_glyph_info_t,
+            c.hb_buffer_get_glyph_infos(buffer, &glyph_count),
+        );
 
     var glyph_pos =
-        @ptrCast([*]c.hb_glyph_position_t, c.hb_buffer_get_glyph_positions(buffer, &glyph_count));
+        @ptrCast(
+            [*]c.hb_glyph_position_t,
+            c.hb_buffer_get_glyph_positions(buffer, &glyph_count),
+        );
 
-    std.log.debug("harfbuzz: got glyph positions", .{});
-
-    var x: c.hb_position_t = 0;
-    var y: c.hb_position_t = 0;
+    var x: i32 = 0;
+    var y: i32 = 20;
 
     var i: u32 = 0;
     while (i < glyph_count) : (i += 1) {
@@ -118,35 +120,57 @@ pub fn main() !void {
         var x_offset = glyph_pos[i].x_offset;
         var y_offset = glyph_pos[i].y_offset;
 
-        // this print segfaults???
-        //   std.log.debug("glyph {d} at {d}x{d}", .{
-        //     .{glyph_id},
-        //     .{x},
-        //     .{y},
-        //   });
+        std.log.debug("harfbuzz: x {d} advance {d} offset {d}", .{x, x_advance, x_offset});
 
-        var err = c.FT_Load_Glyph(font.freetype, glyph_id, c.FT_LOAD_MONOCHROME);
-        if (err != 0) {
-            std.log.err("freetype: {s}", .{c.FT_Error_String(err)});
-            return error.freetype_error;
-        }
-
-        // std.log.debug("freetype: loaded glyph {any}", .{font.freetype.*.glyph.*.bitmap});
+        try checkFreetypeError(
+            c.FT_Load_Glyph(font.freetype, glyph_id, c.FT_LOAD_RENDER | c.FT_LOAD_TARGET_MONO)
+        );
 
         try printGlyph(font.freetype.*.glyph.*.bitmap);
 
-        x += x_advance;
-        y += y_advance;
+        try drawGlyph(
+            frame,
+            @intCast(u32, x + @divTrunc(x_offset, 64)),
+            @intCast(u32, y + @divTrunc(y_offset, 64)),
+            font.freetype.*.glyph.*.bitmap,
+        );
+
+        x += @divTrunc(x_advance, 64);
+        y += @divTrunc(y_advance, 64);
     }
+
+    try bitArrayToPBM(frame, screenWidth, screenHeight, "frame.pbm");
 
     try done();
 }
 
-pub fn printGlyph(glyph: c.FT_Bitmap) !void {
-    var width = glyph.width;
-    var height = glyph.rows;
-    var pitch: u32 = 1;
-    var buffer = glyph.buffer;
+pub fn bitArrayToPBM(
+    frame: []u1,
+    width: u32,
+    height: u32,
+    path: []const u8,
+) !void {
+    var file = try std.fs.cwd().createFile(path, .{});
+    defer file.close();
+
+    var writer = file.writer();
+
+    try writer.print(
+        "P1\n{d} {d}\n", .{width, height}
+    );
+
+    var i: u32 = 0;
+    while (i < width * height) : (i += 1) {
+        var bit = frame[i];
+        try writer.print("{d}", .{bit});
+    }
+}
+
+pub fn drawGlyph(frame: []u1, x: u32, y: u32, bitmap: c.FT_Bitmap) !void {
+    var width = bitmap.width;
+    var height = bitmap.rows;
+    var pitch: u32 = @intCast(u32, bitmap.pitch);
+    var buffer = bitmap.buffer;
 
     var i: u32 = 0;
     while (i < height) : (i += 1) {
@@ -155,13 +179,34 @@ pub fn printGlyph(glyph: c.FT_Bitmap) !void {
             var pixel = buffer[i * pitch + @divTrunc(j, 8)];
             var bit: u32 = @as(u32, 1) << (7 - @truncate(u4, (j % 8)));
             if (pixel & bit != 0) {
-                _ = try std.io.getStdOut().write("#");
-            } else {
-                _ = try std.io.getStdOut().write(" ");
+                frame[((fontHeight - height) + y + i) * screenWidth + x + j] = 1;
             }
         }
-        _ = try std.io.getStdOut().write("\n");
+    }
+}
+
+pub fn printGlyph(glyph: c.FT_Bitmap) !void {
+    var width = glyph.width;
+    var height = glyph.rows;
+    var pitch: u32 = @intCast(u32, glyph.pitch);
+    var buffer = glyph.buffer;
+
+    var writer = std.io.getStdOut().writer();
+
+    var i: u32 = 0;
+    while (i < height) : (i += 1) {
+        var j: u32 = 0;
+        while (j < width) : (j += 1) {
+            var pixel = buffer[i * pitch + @divTrunc(j, 8)];
+            var bit: u32 = @as(u32, 1) << (7 - @truncate(u4, (j % 8)));
+            if (pixel & bit != 0) {
+                try writer.writeByte('#');
+            } else {
+                try writer.writeByte(' ');
+            }
+        }
+        try writer.writeByte('\n');
     }
 
-    _ = try std.io.getStdOut().write("\n");
+    try writer.writeByte('\n');
 }

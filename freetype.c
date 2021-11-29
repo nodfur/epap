@@ -24,8 +24,14 @@
 #include <base/ftinit.c>
 #include <base/ftsystem.c>
 #include <base/ftbitmap.c>
+#include <base/ftbbox.c>
 #include <truetype/truetype.c>
+#include <cff/cff.c>
+#include <cid/type1cid.c>
 #include <psnames/psmodule.c>
+#include <psaux/psaux.c>
+#include <pshinter/pshinter.c>
 #include <sfnt/sfnt.c>
+#include <bdf/bdf.c>
 #include <raster/raster.c>
 #include <gzip/ftgzip.c>

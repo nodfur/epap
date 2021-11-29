@@ -476,7 +476,7 @@ fn epdDrawFrame(info: SystemInfo, frame: [*]const u8, height: u32) !void {
     };
 
     var area2 = area;
-    area.rectangle.w /= 8;
+    area2.rectangle.w /= 8;
 
     var image = Image{
         .area = area2,

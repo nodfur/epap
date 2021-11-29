@@ -559,7 +559,7 @@ fn epdSetTargetAddress(address: u32) !void {
 fn epdLoadImgAreaStart(image: Image) !void {
     var format: u16 =
         (@as(u16, @enumToInt(image.endianness)) << 8) |
-        (image.area.bitsPerPixel.bits() << 4) |
+        (@as(u16, @enumToInt(image.area.bitsPerPixel)) << 4) |
         @as(u16, @enumToInt(image.rotation));
 
     var args = [_]u16{

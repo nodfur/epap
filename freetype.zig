@@ -207,7 +207,7 @@ pub fn drawGlyph(comptime pixel_type: type, black: pixel_type, frame: []pixel_ty
                 var pixel_index = ((lineHeight - yOrigin) + y + i) * screenWidth + x + xOrigin + j;
                 if (pixel_type == u8) {
                     var pixel_value = frame[pixel_index / 8];
-                    frame[pixel_index / 8] = pixel_value & ~(@as(u8, 1) << (7 - @truncate(u3, (pixel_index % 8))));
+                    frame[pixel_index / 8] = pixel_value | (@as(u8, 1) << (7 - @truncate(u3, (pixel_index % 8))));
                 } else {
                     frame[pixel_index] = black;
                 }

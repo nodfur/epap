@@ -42,6 +42,7 @@ pub fn setPixelSizes(face: c.FT_Face, height: u32) !void {
 const Font = struct {
     freetype: c.FT_Face,
     harfbuzz: *c.hb_font_t,
+    height: u32,
 };
 
 pub fn loadFont(path: [*:0]const u8, height: u32) !Font {
@@ -58,22 +59,19 @@ pub fn loadFont(path: [*:0]const u8, height: u32) !Font {
     return Font{
         .freetype = freetype,
         .harfbuzz = harfbuzz,
+        .height = height,
     };
 }
 
-var screenWidth: u32 = 800;
-var screenHeight: u32 = 600;
-
-var fontPath = "fonts/DMMono-Regular.ttf";
-var fontHeight: u32 = 24;
 
 pub fn main() !void {
+    var screenWidth: u32 = 800;
+    var screenHeight: u32 = 600;
+
+    var fontPath = "fonts/DMMono-Regular.ttf";
+    var fontHeight: u32 = 24;
+
     try init();
-
-    var font = try loadFont(fontPath, fontHeight);
-
-    var buffer: *c.hb_buffer_t =
-        @ptrCast(*c.hb_buffer_t, c.hb_buffer_create());
 
     var frame: []u1 =
         try std.heap.c_allocator.alloc(u1, screenHeight * screenWidth);
@@ -82,12 +80,23 @@ pub fn main() !void {
 
     std.mem.set(u1, frame, 0);
 
+    var font = try loadFont(fontPath, fontHeight);
+
+    try renderText(font, "foo bar (void &*[]~) { 1 + 2 + 3 = 6; }", frame, screenWidth, screenHeight, 40, 40);
+    try bitArrayToPBM(frame, screenWidth, screenHeight, "frame.pbm");
+    try done();
+}
+
+pub fn renderText(font: Font, text: [*:0]const u8, frame: []u1, screenWidth: u32, screenHeight: u32, x0: i32, y0: i32) !void {
+    var buffer: *c.hb_buffer_t =
+        @ptrCast(*c.hb_buffer_t, c.hb_buffer_create());
+
     std.log.debug("harfbuzz: created buffer", .{});
 
     c.hb_buffer_set_direction(buffer, .HB_DIRECTION_LTR);
     c.hb_buffer_set_script(buffer, .HB_SCRIPT_LATIN);
     c.hb_buffer_set_language(buffer, c.hb_language_from_string("en", -1));
-    c.hb_buffer_add_utf8(buffer, "foo bar (void &*[]~) { 1 + 2 + 3 = 6; }", -1, 0, -1);
+    c.hb_buffer_add_utf8(buffer, text, -1, 0, -1);
 
     std.log.debug("harfbuzz: added text", .{});
 
@@ -109,8 +118,8 @@ pub fn main() !void {
             c.hb_buffer_get_glyph_positions(buffer, &glyph_count),
         );
 
-    var x: i32 = 0;
-    var y: i32 = 20;
+    var x: i32 = x0;
+    var y: i32 = y0;
 
     var i: u32 = 0;
     while (i < glyph_count) : (i += 1) {
@@ -143,19 +152,17 @@ pub fn main() !void {
 
         try drawGlyph(
             frame,
+            screenWidth,
             @intCast(u32, x + @divTrunc(x_offset, 64)),
             @intCast(u32, y + @divTrunc(y_offset, 64)),
             font.freetype.*.glyph.*.bitmap,
+            font.height + font.height / 2,
             extents,
         );
 
         x += @divTrunc(x_advance, 64);
         y += @divTrunc(y_advance, 64);
     }
-
-    try bitArrayToPBM(frame, screenWidth, screenHeight, "frame.pbm");
-
-    try done();
 }
 
 pub fn bitArrayToPBM(
@@ -180,7 +187,7 @@ pub fn bitArrayToPBM(
     }
 }
 
-pub fn drawGlyph(frame: []u1, x: u32, y: u32, bitmap: c.FT_Bitmap, extents: c.hb_glyph_extents_t) !void {
+pub fn drawGlyph(frame: []u1, screenWidth: u32, x: u32, y: u32, bitmap: c.FT_Bitmap, lineHeight: u32, extents: c.hb_glyph_extents_t) !void {
     var width = bitmap.width;
     var height = bitmap.rows;
     var pitch: u32 = @intCast(u32, bitmap.pitch);
@@ -195,7 +202,7 @@ pub fn drawGlyph(frame: []u1, x: u32, y: u32, bitmap: c.FT_Bitmap, extents: c.hb
             var yOrigin = @intCast(u32, @divTrunc(extents.y_bearing, 64));
             var xOrigin = @intCast(u32, @divTrunc(extents.x_bearing, 64));
             if (pixel & bit != 0) {
-                frame[((fontHeight - yOrigin) + y + i) * screenWidth + x + xOrigin + j] = 1;
+                frame[((lineHeight - yOrigin) + y + i) * screenWidth + x + xOrigin + j] = 1;
             }
         }
     }

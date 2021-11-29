@@ -35,6 +35,7 @@ const Commands = enum(u16) {
     load_img_area_start = 0x21,
     load_img_end = 0x22,
     display_area = 0x34,
+    display_area_buf = 0x37,
 };
 
 const mcsr_base_address: u16 = 0x200;
@@ -131,7 +132,7 @@ pub fn main() !void {
     
     var font = try text.loadFont(fontPath, fontHeight);
 
-    try text.renderText(u1, 1, font, "foo bar (void &*[]~) { 1 + 2 + 3 = 6; }", frame, info.panelWidth, height, 13, 13);
+    try text.renderText(u1, 1, font, "foo bar (void &*[]~) { 1 + 2 + 3 = 6; }", frame, info.panelWidth, height, 0, 0);
     try text.done();
 
     try epdClear(info, 0xff, 0);
@@ -492,7 +493,7 @@ fn epdDrawFrame(info: SystemInfo, frame: [*]const u8, height: u32) !void {
 
     try epdWaitForDisplay();
     try epdWriteImage(image, info.memoryAddress, 6);
-    try epdDisplayArea(area.rectangle, 6);
+    try epdDisplayArea(area.rectangle, 6, info.memoryAddress);
 }
 
 fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {
@@ -515,7 +516,7 @@ fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {
 
     try epdWaitForDisplay();
     try epdWriteImage(image, info.memoryAddress, mode);
-    try epdDisplayArea(area.rectangle, mode);
+    try epdDisplayArea(area.rectangle, mode, info.memoryAddress);
 }
 
 fn epdWriteImage(image: Image, address: u32, mode: u8) !void {
@@ -573,7 +574,7 @@ fn epdLoadImgAreaStart(image: Image) !void {
     try epdWriteMultiArg(&args);
 }
 
-fn epdDisplayArea(rect: Rectangle, mode: u8) !void {
+fn epdDisplayArea(rect: Rectangle, mode: u8, address: u32) !void {
     std.log.info("displaying area with mode {d}", .{mode});
 
     if (mode == 6) {
@@ -596,9 +597,11 @@ fn epdDisplayArea(rect: Rectangle, mode: u8) !void {
         rect.w,
         rect.h,
         mode,
+        @truncate(u16, address & 0xFFFF),
+        @truncate(u16, address >> 16),
     };
 
-    try epdWriteCommand(Commands.display_area);
+    try epdWriteCommand(Commands.display_area_buf);
     try epdWriteMultiArg(&args);
 
     if (mode == 6) {

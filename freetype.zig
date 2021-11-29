@@ -128,11 +128,21 @@ pub fn main() !void {
 
         try printGlyph(font.freetype.*.glyph.*.bitmap);
 
+        var extents: c.hb_glyph_extents_t = undefined;
+
+        if (1 == c.hb_font_get_glyph_extents(font.harfbuzz, glyph_id, &extents)) {
+            std.log.debug("harfbuzz: glyph extents {any}", .{extents});
+        } else {
+            std.log.err("harfbuzz: failed to get glyph extents", .{});
+            return error.harfbuzz_error;
+        }
+
         try drawGlyph(
             frame,
             @intCast(u32, x + @divTrunc(x_offset, 64)),
             @intCast(u32, y + @divTrunc(y_offset, 64)),
             font.freetype.*.glyph.*.bitmap,
+            extents,
         );
 
         x += @divTrunc(x_advance, 64);
@@ -166,7 +176,7 @@ pub fn bitArrayToPBM(
     }
 }
 
-pub fn drawGlyph(frame: []u1, x: u32, y: u32, bitmap: c.FT_Bitmap) !void {
+pub fn drawGlyph(frame: []u1, x: u32, y: u32, bitmap: c.FT_Bitmap, extents: c.hb_glyph_extents_t) !void {
     var width = bitmap.width;
     var height = bitmap.rows;
     var pitch: u32 = @intCast(u32, bitmap.pitch);
@@ -178,8 +188,10 @@ pub fn drawGlyph(frame: []u1, x: u32, y: u32, bitmap: c.FT_Bitmap) !void {
         while (j < width) : (j += 1) {
             var pixel = buffer[i * pitch + @divTrunc(j, 8)];
             var bit: u32 = @as(u32, 1) << (7 - @truncate(u4, (j % 8)));
+            var yOrigin = @intCast(u32, @divTrunc(extents.y_bearing, 64));
+            var xOrigin = @intCast(u32, @divTrunc(extents.x_bearing, 64));
             if (pixel & bit != 0) {
-                frame[((fontHeight - height) + y + i) * screenWidth + x + j] = 1;
+                frame[((fontHeight - yOrigin) + y + i) * screenWidth + x + xOrigin + j] = 1;
             }
         }
     }

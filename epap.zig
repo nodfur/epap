@@ -579,7 +579,7 @@ fn epdDisplayArea(rect: Rectangle, mode: u8, address: u32) !void {
 
     if (mode == 6) {
         try epdWriteRegister(.up1sr_2, (try epdReadRegister(.up1sr_2)) | (1 << 2));
-        try epdWriteRegister(.bgvr, 0xf0);
+        try epdWriteRegister(.bgvr, 0x0);
 var args = [_]u16{
         rect.x,
         rect.y,

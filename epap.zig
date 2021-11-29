@@ -580,18 +580,7 @@ fn epdDisplayArea(rect: Rectangle, mode: u8, address: u32) !void {
     if (mode == 6) {
         try epdWriteRegister(.up1sr_2, (try epdReadRegister(.up1sr_2)) | (1 << 2));
         try epdWriteRegister(.bgvr, 0xf0);
-
-        //     //Set Display mode to 1 bpp mode - Set 0x18001138 Bit[18](0x1800113A Bit[2])to 1
-        // EPD_IT8951_WriteReg(UP1SR+2, EPD_IT8951_ReadReg(UP1SR+2) | (1<<2) );
-
-        // EPD_IT8951_WriteReg(BGVR, (Front_Gray_Val<<8) | Back_Gray_Val);
-
-        
-        // EPD_IT8951_WriteReg(UP1SR+2, EPD_IT8951_ReadReg(UP1SR+2) & ~(1<<2) );
-
-    }
-
-    var args = [_]u16{
+var args = [_]u16{
         rect.x,
         rect.y,
         rect.w,
@@ -601,11 +590,22 @@ fn epdDisplayArea(rect: Rectangle, mode: u8, address: u32) !void {
         @truncate(u16, address >> 16),
     };
 
-    try epdWriteCommand(Commands.display_area_buf);
-    try epdWriteMultiArg(&args);
+        try epdWriteCommand(Commands.display_area_buf);
+        try epdWriteMultiArg(&args);
 
-    if (mode == 6) {
         try epdWaitForDisplay();
         try epdWriteRegister(.up1sr_2, (try epdReadRegister(.up1sr_2)) & ~(@as(u16, 1 << 2)));
+
+    } else {
+        var args = [_]u16{
+            rect.x,
+            rect.y,
+            rect.w,
+            rect.h,
+            mode,
+        };
+
+        try epdWriteCommand(Commands.display_area);
+        try epdWriteMultiArg(&args);
     }
 }

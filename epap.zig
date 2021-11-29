@@ -578,7 +578,7 @@ fn epdDisplayArea(rect: Rectangle, mode: u8) !void {
 
     if (mode == 6) {
         try epdWriteRegister(.up1sr_2, (try epdReadRegister(.up1sr_2)) | (1 << 2));
-        try epdWriteRegister(.bgvr, 0x30);
+        try epdWriteRegister(.bgvr, 0x0);
 
         //     //Set Display mode to 1 bpp mode - Set 0x18001138 Bit[18](0x1800113A Bit[2])to 1
         // EPD_IT8951_WriteReg(UP1SR+2, EPD_IT8951_ReadReg(UP1SR+2) | (1<<2) );

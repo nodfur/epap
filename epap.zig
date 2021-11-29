@@ -132,6 +132,7 @@ pub fn main() !void {
     delayMs(200);
 
     try epdDrawFrame(info, @ptrCast([*]u4, frame));
+    delayMs(5000);
 
     try epdClear(info, 0xff, 0);
     delayMs(200);

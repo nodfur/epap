@@ -128,11 +128,11 @@ pub fn main() !void {
 
     std.log.info("setting bitmap to 0xf", .{});
 
-    std.mem.set(u8, frame, 0xf);
+    std.mem.set(u8, frame, 0xff);
     
     var font = try text.loadFont(fontPath, fontHeight);
 
-    try text.renderText(u8, 1, font, "foo bar (void &*[]~) { 1 + 2 + 3 = 6; }", frame, info.panelWidth, height, 0, 0);
+    try text.renderText(u8, 0, font, "foo bar (void &*[]~) { 1 + 2 + 3 = 6; }", frame, info.panelWidth, height, 0, 0);
     try text.done();
 
     try epdClear(info, 0xff, 0);

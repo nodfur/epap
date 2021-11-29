@@ -35,3 +35,4 @@
 #include <bdf/bdf.c>
 #include <raster/raster.c>
 #include <gzip/ftgzip.c>
+#include <autofit/autofit.c>

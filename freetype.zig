@@ -64,8 +64,8 @@ pub fn loadFont(path: [*:0]const u8, height: u32) !Font {
 var screenWidth: u32 = 800;
 var screenHeight: u32 = 600;
 
-var fontPath = "fonts/cozette.bdf";
-var fontHeight: u32 = 13;
+var fontPath = "fonts/DMMono-Regular.ttf";
+var fontHeight: u32 = 24;
 
 pub fn main() !void {
     try init();
@@ -87,7 +87,7 @@ pub fn main() !void {
     c.hb_buffer_set_direction(buffer, .HB_DIRECTION_LTR);
     c.hb_buffer_set_script(buffer, .HB_SCRIPT_LATIN);
     c.hb_buffer_set_language(buffer, c.hb_language_from_string("en", -1));
-    c.hb_buffer_add_utf8(buffer, "foo bar () { 1 + 2 = 4; }", -1, 0, -1);
+    c.hb_buffer_add_utf8(buffer, "foo bar (void &*[]~) { 1 + 2 + 3 = 6; }", -1, 0, -1);
 
     std.log.debug("harfbuzz: added text", .{});
 
@@ -123,7 +123,11 @@ pub fn main() !void {
         std.log.debug("harfbuzz: x {d} advance {d} offset {d}", .{x, x_advance, x_offset});
 
         try checkFreetypeError(
-            c.FT_Load_Glyph(font.freetype, glyph_id, c.FT_LOAD_RENDER | c.FT_LOAD_TARGET_MONO)
+            c.FT_Load_Glyph(
+                font.freetype, 
+                glyph_id, 
+                c.FT_LOAD_RENDER | c.FT_LOAD_TARGET_MONO | c.FT_LOAD_FORCE_AUTOHINT,
+            )
         );
 
         try printGlyph(font.freetype.*.glyph.*.bitmap);

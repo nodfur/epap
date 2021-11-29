@@ -233,12 +233,10 @@ fn gpioHigh(pin: Pin) void {
 }
 
 fn csLow() void {
-    dumpMessage(":");
     gpioLow(Pin.cs);
 }
 
 fn csHigh() void {
-    dumpMessage(".");
     gpioHigh(Pin.cs);
 }
 

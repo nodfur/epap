@@ -4,14 +4,14 @@ pub fn build(b: *std.build.Builder) void {
     const target = b.standardTargetOptions(.{});
     const mode = b.standardReleaseOptions();
 
-    const freetype = b.addStaticLibrary("freetype", null);
+    const freetype = b.addSharedLibrary("freetype", null, .unversioned);
     freetype.linkSystemLibrary("c");
     freetype.addIncludeDir("vendor/freetype/include");
     freetype.addIncludeDir("vendor/freetype/src");
     freetype.addIncludeDir(".");
     freetype.addCSourceFile("freetype.c", &.{"-fno-sanitize=undefined"});
 
-    const harfbuzz = b.addStaticLibrary("harfbuzz", null);
+    const harfbuzz = b.addSharedLibrary("harfbuzz", null, .unversioned);
     harfbuzz.linkSystemLibrary("c");
     harfbuzz.linkSystemLibrary("c++");
     harfbuzz.addIncludeDir("vendor/freetype/include");
@@ -49,4 +49,7 @@ pub fn build(b: *std.build.Builder) void {
     epap_ft.linkSystemLibrary("c");
     epap_ft.setBuildMode(mode);
     epap_ft.install();
+
+    freetype.install();
+    harfbuzz.install();
 }

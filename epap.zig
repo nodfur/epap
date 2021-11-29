@@ -114,16 +114,18 @@ pub fn main() !void {
     var fontPath = "fonts/cozette.bdf";
     var fontHeight: u32 = 13;
 
-    try text.init();
-
     var info = try epdInit(-1.73);
 
     var height = fontHeight * 3;
+
+    std.log.info("allocating text bitmap frame", .{});
 
     var frame: []u1 =
         try std.heap.c_allocator.alloc(u1, height * @as(u32, info.panelWidth));
 
     defer std.heap.c_allocator.free(frame);
+
+    std.log.info("setting bitmap to 0x1", .{});
 
     std.mem.set(u1, frame, 0x1);
 

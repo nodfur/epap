@@ -474,8 +474,8 @@ fn epdDrawFrame(info: SystemInfo, frame: [*]const u4) !void {
     };
 
     try epdWaitForDisplay();
-    try epdWriteImage(image, info.memoryAddress, 2);
-    try epdDisplayArea(area.rectangle, 2);
+    try epdWriteImage(image, info.memoryAddress, 0);
+    try epdDisplayArea(area.rectangle, 0);
 }
 
 fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {

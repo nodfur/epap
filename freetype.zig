@@ -202,7 +202,7 @@ pub fn drawGlyph(frame: []u1, screenWidth: u32, x: u32, y: u32, bitmap: c.FT_Bit
             var yOrigin = @intCast(u32, @divTrunc(extents.y_bearing, 64));
             var xOrigin = @intCast(u32, @divTrunc(extents.x_bearing, 64));
             if (pixel & bit != 0) {
-                frame[((lineHeight - yOrigin) + y + i) * screenWidth + x + xOrigin + j] = 1;
+                frame[((lineHeight - yOrigin) / 2 + y + i) * screenWidth + x + xOrigin + j] = 1;
             }
         }
     }

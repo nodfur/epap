@@ -45,6 +45,8 @@ const Registers = enum(u16) {
     lisar0 = mcsr_base_address + 0x8,
     lisar2 = mcsr_base_address + 0x8 + 2,
     lutafsr = display_reg_base + 0x224,
+    up1sr_2 = display_reg_base + 0x138 + 2,
+    bgvr = display_reg_base + 0x250,
 };
 
 const Endianness = enum(u1) {
@@ -118,16 +120,16 @@ pub fn main() !void {
 
     var height = fontHeight * 3;
 
-    var frame: []u8 =
-        try std.heap.c_allocator.alloc(u8, height * @as(u32, info.panelWidth));
+    var frame: []u1 =
+        try std.heap.c_allocator.alloc(u1, height * @as(u32, info.panelWidth));
 
     defer std.heap.c_allocator.free(frame);
 
-    std.mem.set(u8, frame, 0xff);
+    std.mem.set(u1, frame, 0x1);
 
     var font = try text.loadFont(fontPath, fontHeight);
 
-    try text.renderText(u8, 0, font, "foo bar (void &*[]~) { 1 + 2 + 3 = 6; }", frame, info.panelWidth, height, 13, 13);
+    try text.renderText(u1, 0, font, "foo bar (void &*[]~) { 1 + 2 + 3 = 6; }", frame, info.panelWidth, height, 13, 13);
     try text.done();
 
     try epdClear(info, 0xff, 0);
@@ -473,8 +475,11 @@ fn epdDrawFrame(info: SystemInfo, frame: [*]const u8, height: u32) !void {
         .bitsPerPixel = PixelFormat.bpp8,
     };
 
+    var area2 = area;
+    area.rectangle.w /= 8;
+
     var image = Image{
-        .area = area,
+        .area = area2,
         .data = @ptrCast([*]const u8, frame),
         .endianness = Endianness.little,
         .rotation = Rotation.normal,
@@ -566,6 +571,20 @@ fn epdLoadImgAreaStart(image: Image) !void {
 fn epdDisplayArea(rect: Rectangle, mode: u8) !void {
     std.log.info("displaying area with mode {d}", .{mode});
 
+    if (mode == 6) {
+        try epdWriteRegister(.up1sr_2, (try epdReadRegister(.up1sr_2)) | (1 << 2));
+        try epdWriteRegister(.bgvr, 0xf0);
+
+        //     //Set Display mode to 1 bpp mode - Set 0x18001138 Bit[18](0x1800113A Bit[2])to 1
+        // EPD_IT8951_WriteReg(UP1SR+2, EPD_IT8951_ReadReg(UP1SR+2) | (1<<2) );
+
+        // EPD_IT8951_WriteReg(BGVR, (Front_Gray_Val<<8) | Back_Gray_Val);
+
+        
+        // EPD_IT8951_WriteReg(UP1SR+2, EPD_IT8951_ReadReg(UP1SR+2) & ~(1<<2) );
+
+    }
+
     var args = [_]u16{
         rect.x,
         rect.y,
@@ -576,4 +595,9 @@ fn epdDisplayArea(rect: Rectangle, mode: u8) !void {
 
     try epdWriteCommand(Commands.display_area);
     try epdWriteMultiArg(&args);
+
+    if (mode == 6) {
+        try epdWaitForDisplay();
+        try epdWriteRegister(.up1sr_2, (try epdReadRegister(.up1sr_2)) & ~(@as(u16, 1 << 2)));
+    }
 }

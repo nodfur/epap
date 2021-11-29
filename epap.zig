@@ -138,6 +138,9 @@ pub fn main() !void {
     try epdClear(info, 0xff, 0);
     delayMs(200);
 
+    try epdClear(info, 0x0, 2);
+    delayMs(200);
+
     std.log.info("drawing text in A2 mode", .{});
 
     try epdDrawFrame(info, @ptrCast([*]const u8, frame), height);

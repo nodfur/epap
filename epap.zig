@@ -112,7 +112,7 @@ pub fn main() !void {
 
     try text.init();
 
-    var fontPath = "fonts/DMMonoRegular.ttf";
+    var fontPath = "fonts/DMMono-Regular.ttf";
     var fontHeight: u32 = 24;
 
     var info = try epdInit(-1.73);

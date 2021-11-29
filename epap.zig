@@ -112,8 +112,8 @@ pub fn main() !void {
 
     try text.init();
 
-    var fontPath = "fonts/cozette.bdf";
-    var fontHeight: u32 = 13;
+    var fontPath = "fonts/DMMono-Regular.ttf";
+    var fontHeight: u32 = 36;
 
     var info = try epdInit(-1.73);
 
@@ -128,7 +128,7 @@ pub fn main() !void {
 
     std.log.info("setting bitmap to 0xf", .{});
 
-    std.mem.set(u8, frame, 0x0);
+    std.mem.set(u8, frame, 0xff);
     
     var font = try text.loadFont(fontPath, fontHeight);
 

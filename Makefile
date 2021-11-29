@@ -1,7 +1,8 @@
 epap: epap.zig Makefile 
-	zig build
+	zig build --verbose
 
 build: epap
 clean:; rm epap
 save:; git save
-run:; sudo ./epap > ~/epap-zig.log
+test:; ./run-test.sh
+yolo: epap test save

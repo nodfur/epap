@@ -128,8 +128,8 @@ pub fn main() !void {
     try text.renderText(u4, 0, font, "foo bar (void &*[]~) { 1 + 2 + 3 = 6; }", frame, info.panelWidth, info.panelHeight, 40, 40);
     try text.done();
 
-    // try epdClear(info, 0xff, 0);
-    // delayMs(200);
+    try epdClear(info, 0xff, 0);
+    delayMs(200);
 
     try epdDrawFrame(info, @ptrCast([*]u4, frame));
     delayMs(5000);
@@ -474,8 +474,8 @@ fn epdDrawFrame(info: SystemInfo, frame: [*]const u4) !void {
     };
 
     try epdWaitForDisplay();
-    try epdWriteImage(image, info.memoryAddress, 0);
-    try epdDisplayArea(area.rectangle, 0);
+    try epdWriteImage(image, info.memoryAddress, 2);
+    try epdDisplayArea(area.rectangle, 2);
 }
 
 fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {

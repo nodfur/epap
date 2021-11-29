@@ -128,8 +128,8 @@ pub fn main() !void {
     try text.renderText(u4, 0, font, "foo bar (void &*[]~) { 1 + 2 + 3 = 6; }", frame, info.panelWidth, info.panelHeight, 40, 40);
     try text.done();
 
-    try epdClear(info, 0xff, 0);
-    delayMs(200);
+    // try epdClear(info, 0xff, 0);
+    // delayMs(200);
 
     try epdDrawFrame(info, @ptrCast([*]u4, frame));
     delayMs(5000);

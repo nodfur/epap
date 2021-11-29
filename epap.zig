@@ -109,8 +109,8 @@ pub fn main() !void {
 
     try text.init();
 
-    var fontPath = "fonts/DMMono-Regular.ttf";
-    var fontHeight: u32 = 24;
+    var fontPath = "fonts/cozette.bdf";
+    var fontHeight: u32 = 13;
 
     try text.init();
 

@@ -473,6 +473,10 @@ fn epdDrawFrame(info: SystemInfo, frame: [*]const u4) !void {
         .endianness = Endianness.little,
         .rotation = Rotation.normal,
     };
+
+    try epdWaitForDisplay();
+    try epdWriteImage(image, info.memoryAddress, 2);
+    try epdDisplayArea(area.rectangle, 2);
 }
 
 fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {

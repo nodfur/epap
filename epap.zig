@@ -121,18 +121,18 @@ pub fn main() !void {
 
     std.log.info("allocating text bitmap frame", .{});
 
-    var frame: []u1 =
-        try std.heap.c_allocator.alloc(u1, height * @as(u32, info.panelWidth));
+    var frame: []u8 =
+        try std.heap.c_allocator.alloc(u8, height * @as(u32, info.panelWidth) / 8);
 
     defer std.heap.c_allocator.free(frame);
 
-    std.log.info("setting bitmap to 0x1", .{});
+    std.log.info("setting bitmap to 0xf", .{});
 
-    std.mem.set(u1, frame, 0x1);
+    std.mem.set(u8, frame, 0xf);
     
     var font = try text.loadFont(fontPath, fontHeight);
 
-    //try text.renderText(u1, 1, font, "foo bar (void &*[]~) { 1 + 2 + 3 = 6; }", frame, info.panelWidth, height, 0, 0);
+    try text.renderText(u8, 1, font, "foo bar (void &*[]~) { 1 + 2 + 3 = 6; }", frame, info.panelWidth, height, 0, 0);
     try text.done();
 
     try epdClear(info, 0xff, 0);

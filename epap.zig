@@ -117,7 +117,7 @@ pub fn main() !void {
 
     var info = try epdInit(-1.73);
 
-    var height = fontHeight * 8;
+    var height = fontHeight * 2;
 
     std.log.info("allocating text bitmap frame", .{});
 

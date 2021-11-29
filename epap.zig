@@ -116,22 +116,24 @@ pub fn main() !void {
 
     var info = try epdInit(-1.73);
 
-    var frame: []u4 =
-        try std.heap.c_allocator.alloc(u4, @as(u32, info.panelHeight) * @as(u32, info.panelWidth));
+    var height = fontHeight * 3;
+
+    var frame: []u8 =
+        try std.heap.c_allocator.alloc(u8, height * @as(u32, info.panelWidth));
 
     defer std.heap.c_allocator.free(frame);
 
-    std.mem.set(u4, frame, 0xf);
+    std.mem.set(u8, frame, 0xff);
 
     var font = try text.loadFont(fontPath, fontHeight);
 
-    try text.renderText(u4, 0, font, "foo bar (void &*[]~) { 1 + 2 + 3 = 6; }", frame, info.panelWidth, info.panelHeight, 40, 40);
+    try text.renderText(u8, 0, font, "foo bar (void &*[]~) { 1 + 2 + 3 = 6; }", frame, info.panelWidth, height, 13, 13);
     try text.done();
 
     try epdClear(info, 0xff, 0);
     delayMs(200);
 
-    try epdDrawFrame(info, @ptrCast([*]u4, frame));
+    try epdDrawFrame(info, @ptrCast([*]const u8, frame), height);
     delayMs(5000);
 
     try epdClear(info, 0xff, 0);
@@ -460,10 +462,15 @@ fn drawCenteredSquare(info: SystemInfo, color: u4) !void {
     try epdDisplayArea(area.rectangle, 2);
 }
 
-fn epdDrawFrame(info: SystemInfo, frame: [*]const u4) !void {
+fn epdDrawFrame(info: SystemInfo, frame: [*]const u8, height: u32) !void {
     var area = PixelArea{
-        .rectangle = fullScreenRectangle(info),
-        .bitsPerPixel = PixelFormat.bpp4,
+        .rectangle = Rectangle{
+            .x = 0,
+            .y = 0,
+            .w = info.panelWidth,
+            .h = @intCast(u16, height),
+        },
+        .bitsPerPixel = PixelFormat.bpp8,
     };
 
     var image = Image{
@@ -474,8 +481,8 @@ fn epdDrawFrame(info: SystemInfo, frame: [*]const u4) !void {
     };
 
     try epdWaitForDisplay();
-    try epdWriteImage(image, info.memoryAddress, 2);
-    try epdDisplayArea(area.rectangle, 2);
+    try epdWriteImage(image, info.memoryAddress, 6);
+    try epdDisplayArea(area.rectangle, 6);
 }
 
 fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {

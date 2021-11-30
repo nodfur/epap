@@ -268,7 +268,7 @@ fn epdStartPacket(kind: PacketType) !void {
 }
 
 fn epdWriteCommand(command: Commands) !void {
-    std.log.info("cmd {x} {x}", .{ @enumToInt(command), command });
+    // std.log.debug("cmd {x} {x}", .{ @enumToInt(command), command });
     try epdStartPacket(PacketType.command);
     defer csHigh();
 
@@ -307,13 +307,12 @@ fn spiReadWord() u16 {
     var lo: u8 = spiReadByte();
     var word: u16 = (@as(u16, hi) << 8) | @as(u16, lo);
 
-    std.log.debug("read word 0x{x}", .{word});
+    // std.log.debug("read word 0x{x}", .{word});
 
     return word;
 }
 
 fn spiReadU32() u32 {
-    std.log.info("reading U32\n", .{});
     // this is kinda backwards...
     var lo: u16 = spiReadWord();
     var hi: u16 = spiReadWord();

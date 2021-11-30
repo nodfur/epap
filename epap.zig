@@ -9,6 +9,28 @@ fn readCharacterFromStdin() !u8 {
     return reader.readByte();
 }
 
+const term = @cImport({
+    @cInclude("termios.h");
+    @cInclude("unistd.h");
+    @cInclude("stdlib.h");
+});
+
+var orig_termios: term.termios = undefined;
+
+pub fn enableRawMode() void {
+    _ = term.tcgetattr(term.STDIN_FILENO, &orig_termios);
+    _ = term.atexit(disableRawMode);
+
+    var raw: term.termios = undefined;
+    raw.c_lflag &= ~(@as(u8, term.ECHO) | @as(u8, term.ICANON));
+
+    _ = term.tcsetattr(term.STDIN_FILENO, term.TCSAFLUSH, &raw);
+}
+
+pub fn disableRawMode() callconv(.C) void {
+    _ = term.tcsetattr(term.STDIN_FILENO, term.TCSAFLUSH, &orig_termios);
+}
+
 pub fn main() !void {
     try epd.initializeBroadcomChip();
     defer {
@@ -52,6 +74,9 @@ pub fn main() !void {
     std.mem.set(u8, string, 0);
 
     var i: usize = 0;
+
+    enableRawMode();
+    defer disableRawMode();
 
     while (true) {
         var c = readCharacterFromStdin() catch |err| break;

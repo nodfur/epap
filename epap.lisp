@@ -13,8 +13,7 @@
 
 (defun reload ()
   (uiop:run-program "make" :output t)
-  (use-foreign-library epapi)
-  )
+  (use-foreign-library epapi))
 
 (defcfun "epap_start_broadcom" :uint32)
 (defcfun "epap_stop_broadcom" :uint32)
@@ -23,7 +22,7 @@
 (defcstruct display-info
   (panel-width :uint16)
   (panel-height :uint16)
-  (memory-address :uint32)
+  (base-address :uint32)
   (firmware-version :char :count 16)
   (lut-version :char :count 16))
 
@@ -33,28 +32,38 @@
 
 (defcfun "epap_sleep" :uint32)
 
-(uiop:run-program "whoami" :output :string)
+(defvar *display-width*)
+(defvar *display-height*)
+(defvar *base-address*)
 
-(defclass display ()
-  ((width :initarg :width :accessor :display-width)
-   (height :initarg :height :accessor :display-height)))
+(define-condition epapi-error (error)
+  ((function :initarg :function-name :reader epapi-error-function)
+   (args :initarg :args :reader epapi-error-args)))
 
-(defvar *display*)
+(defmacro try (body)
+  (let ((v (gensym))
+        (fn (car body))
+        (args (cdr body)))
+    `(let ((,v (,fn ,@args)))
+       (if (= 0 ,v)
+           nil
+           (error 'epapi-error :function ',fn :args ',args)))))
 
-(defun get-display ()
+(defun read-display-info ()
   (with-foreign-object (info '(:struct display-info))
-    (epap-start-display -1.73d0 info)
+    (try (epap-start-display -1.73d0 info))
     (with-foreign-slots
-        ((panel-width panel-height)
+        ((panel-width panel-height base-address)
          info (:struct display-info))
-      (make-instance 'display
-                     :width panel-width
-                     :height panel-height))))
+      (setf *display-width* panel-width
+            *display-height* panel-height
+            *base-address* base-address))))
 
 (defun test ()
-  (epap-start-broadcom)
-  (setf *display* (get-display))
-  (epap-stop-broadcom))
+  (try (epap-start-broadcom))
+  (read-display-info)
+  (try (epap-sleep))
+  (try (epap-stop-broadcom)))
 
 (defun yolo ()
   (uiop:run-program "make && git save && git push" :output t))

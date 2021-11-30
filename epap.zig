@@ -30,12 +30,11 @@ pub fn main() !void {
 
     std.mem.set(u8, frame, 0xff);
     
-    var font = try text.loadFont(fontPath, fontHeight);
-
     try epd.clearScreen(info, 0xff, 0);
 
     std.log.info("drawing text in A2 mode", .{});
 
+    var font = try text.loadFont(fontPath, fontHeight);
     var rectangle = epd.Rectangle{
         .x = 0,
         .y = 0,
@@ -53,7 +52,7 @@ pub fn main() !void {
     try epd.drawBitmap(rectangle, @ptrCast([*]const u8, frame), height);
 
     epd.delayMs(5000);
-
+    
     try epd.clearScreen(info, 0xff, 0);
     epd.delayMs(200);
 

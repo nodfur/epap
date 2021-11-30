@@ -374,11 +374,17 @@ fn epdReadRegister(r: Registers) !u16 {
 }
 
 fn epdWaitForDisplay() !void {
-    while (true) {
+    var i: u32 = 0;
+    while (i < 1000) {
         if ((try epdReadRegister(Registers.lutafsr)) == 0) {
             return;
         }
+
+        i += 1;
     }
+
+    std.log.err("timeout waiting for display", .{});
+    return error.epd_timeout;
 }
 
 pub fn fullScreenRectangle(info: SystemInfo) Rectangle {

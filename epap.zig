@@ -119,10 +119,10 @@ pub fn main() !void {
 
     var height = fontHeight * 2;
 
-    std.log.info("allocating text bitmap frame", .{});
+    std.log.info("allocating full-screen bitmap", .{});
 
     var frame: []u8 =
-        try std.heap.c_allocator.alloc(u8, height * @as(u32, info.panelWidth) / 8);
+        try std.heap.c_allocator.alloc(u8, info.panelHeight * @as(u32, info.panelWidth) / 8);
 
     defer std.heap.c_allocator.free(frame);
 
@@ -132,7 +132,7 @@ pub fn main() !void {
     
     var font = try text.loadFont(fontPath, fontHeight);
 
-    try text.renderText(0, font, "foo bar (void &*[]~)", frame, info.panelWidth, height, 0, 0);
+    try text.renderText(0, font, "foo bar (void &*[]~)", frame, info.panelWidth, 0, 0);
     try text.done();
 
     try epdClear(info, 0xff, 0);
@@ -143,7 +143,7 @@ pub fn main() !void {
 
     std.log.info("drawing text in A2 mode", .{});
 
-    try epdDrawFrame(info, @ptrCast([*]const u8, frame), height);
+    try epdDrawBitmap(fullScreenRectangle(info), @ptrCast([*]const u8, frame), height);
     delayMs(5000);
 
     try epdClear(info, 0xff, 0);
@@ -469,14 +469,9 @@ fn drawCenteredSquare(info: SystemInfo, color: u4) !void {
     try epdDisplayArea(area.rectangle, 2);
 }
 
-fn epdDrawFrame(info: SystemInfo, frame: [*]const u8, height: u32) !void {
+fn epdDrawBitmap(rectangle: Rectangle, frame: [*]const u8, base: u32) !void {
     var area = PixelArea{
-        .rectangle = Rectangle{
-            .x = 0,
-            .y = 0,
-            .w = info.panelWidth,
-            .h = @intCast(u16, height),
-        },
+        .rectangle = rectangle,
         .bitsPerPixel = PixelFormat.bpp8,
     };
 
@@ -491,8 +486,8 @@ fn epdDrawFrame(info: SystemInfo, frame: [*]const u8, height: u32) !void {
     };
 
     try epdWaitForDisplay();
-    try epdWriteImage(image, info.memoryAddress, 6);
-    try epdDisplayArea(area.rectangle, 6, info.memoryAddress);
+    try epdWriteImage(image, base, 6);
+    try epdDisplayArea(area.rectangle, 6, base);
 }
 
 fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {

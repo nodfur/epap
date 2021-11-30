@@ -82,12 +82,20 @@ pub fn main() !void {
 
     var font = try loadFont(fontPath, fontHeight);
 
-    try renderText(1, font, "foo bar (void &*[]~) { 1 + 2 + 3 = 6; }", frame, screenWidth, screenHeight, 40, 40);
+    try renderText(1, font, "foo bar (void &*[]~) { 1 + 2 + 3 = 6; }", frame, screenWidth, 40, 40);
     try bitmapToPBM(frame, screenWidth, screenHeight, "frame.pbm");
     try done();
 }
 
-pub fn renderText(black: u1, font: Font, text: [*:0]const u8, frame: []u8, screenWidth: u32, screenHeight: u32, x0: i32, y0: i32) !void {
+pub fn renderText(
+    black: u1, 
+    font: Font, 
+    text: [*:0]const u8, 
+    frame: []u8, 
+    screenWidth: u32, 
+    x0: i32, 
+    y0: i32,
+) !void {
     var buffer: *c.hb_buffer_t =
         @ptrCast(*c.hb_buffer_t, c.hb_buffer_create());
 

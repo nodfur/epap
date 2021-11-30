@@ -35,23 +35,28 @@
 
 (uiop:run-program "whoami" :output :string)
 
-(defvar *panel-width*)
-(defvar *panel-height*)
+(defclass display ()
+  ((width :initarg :width :accessor :display-width)
+   (height :initarg :height :accessor :display-height)))
 
-(defun get-display-info ()
+(defvar *display*)
+
+(defun get-display ()
   (with-foreign-object (info '(:struct display-info))
     (epap-start-display -1.73d0 info)
     (with-foreign-slots
         ((panel-width panel-height)
          info (:struct display-info))
-      (setf *panel-width* panel-width
-            *panel-height* panel-height)
-      (list panel-width panel-height))))
+      (make-instance 'display
+                     :width panel-width
+                     :height panel-height))))
 
 (defun test ()
   (epap-start-broadcom)
-  (get-display-info)
-  (epap-stop-broadcom)
-  )
+  (setf *display* (get-display))
+  (epap-stop-broadcom))
+
+(defun yolo ()
+  (uiop:run-program "make && git save && git push" :output t))
 
 (test)

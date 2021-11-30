@@ -3,6 +3,6 @@ epap: epap.zig Makefile
 
 build: epap
 clean:; rm epap
-save:; git save
+save:; git save && git push
 test:; ./run-test.sh
 yolo: epap test save

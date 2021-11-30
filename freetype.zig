@@ -73,21 +73,21 @@ pub fn main() !void {
 
     try init();
 
-    var frame: []u1 =
-        try std.heap.c_allocator.alloc(u1, screenHeight * screenWidth);
+    var frame: []u8 =
+        try std.heap.c_allocator.alloc(u8, screenHeight * screenWidth / 8);
 
     defer std.heap.c_allocator.free(frame);
 
-    std.mem.set(u1, frame, 0);
+    std.mem.set(u8, frame, 0);
 
     var font = try loadFont(fontPath, fontHeight);
 
-    try renderText(u1, 1, font, "foo bar (void &*[]~) { 1 + 2 + 3 = 6; }", frame, screenWidth, screenHeight, 40, 40);
-    try bitArrayToPBM(frame, screenWidth, screenHeight, "frame.pbm");
+    try renderText(1, font, "foo bar (void &*[]~) { 1 + 2 + 3 = 6; }", frame, screenWidth, screenHeight, 40, 40);
+    try bitmapToPBM(frame, screenWidth, screenHeight, "frame.pbm");
     try done();
 }
 
-pub fn renderText(comptime pixel_type: type, black: pixel_type, font: Font, text: [*:0]const u8, frame: []pixel_type, screenWidth: u32, screenHeight: u32, x0: i32, y0: i32) !void {
+pub fn renderText(black: u1, font: Font, text: [*:0]const u8, frame: []u8, screenWidth: u32, screenHeight: u32, x0: i32, y0: i32) !void {
     var buffer: *c.hb_buffer_t =
         @ptrCast(*c.hb_buffer_t, c.hb_buffer_create());
 
@@ -151,7 +151,6 @@ pub fn renderText(comptime pixel_type: type, black: pixel_type, font: Font, text
         }
 
         try drawGlyph(
-            pixel_type,
             black,
             frame,
             screenWidth,
@@ -167,8 +166,16 @@ pub fn renderText(comptime pixel_type: type, black: pixel_type, font: Font, text
     }
 }
 
-pub fn bitArrayToPBM(
-    frame: []u1,
+fn getBit(bytes: []u8, bit: u32) u1 {
+    if (0 != bytes[bit / 8] & (@as(u8, 1) << @intCast(u3, bit % 8))) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+pub fn bitmapToPBM(
+    bytes: []u8,
     width: u32,
     height: u32,
     path: []const u8,
@@ -184,12 +191,18 @@ pub fn bitArrayToPBM(
 
     var i: u32 = 0;
     while (i < width * height) : (i += 1) {
-        var bit = frame[i];
+        var bit = getBit(bytes, i);
         try writer.print("{d}", .{bit});
     }
 }
 
-pub fn drawGlyph(comptime pixel_type: type, black: pixel_type, frame: []pixel_type, screenWidth: u32, x: u32, y: u32, bitmap: c.FT_Bitmap, lineHeight: u32, extents: c.hb_glyph_extents_t) !void {
+fn setBitInArray(bytes: []u8, index: u32, bit: u1) void {
+    var byteIndex = @divTrunc(index, 8);
+    var bitIndex = @intCast(u3, index % 8);
+    bytes[byteIndex] = (bytes[byteIndex] & ~(@as(u8, 1) << bitIndex)) | (@as(u8, bit) << bitIndex);
+}
+
+pub fn drawGlyph(black: u1, frame: []u8, screenWidth: u32, x: u32, y: u32, bitmap: c.FT_Bitmap, lineHeight: u32, extents: c.hb_glyph_extents_t) !void {
     var width = bitmap.width;
     var height = bitmap.rows;
     var pitch: u32 = @intCast(u32, bitmap.pitch);
@@ -204,13 +217,8 @@ pub fn drawGlyph(comptime pixel_type: type, black: pixel_type, frame: []pixel_ty
             var yOrigin = @intCast(u32, @divTrunc(extents.y_bearing, 64));
             var xOrigin = @intCast(u32, @divTrunc(extents.x_bearing, 64));
             if (pixel & bit != 0) {
-                var pixel_index: usize = ((lineHeight - yOrigin) + y + i) * screenWidth + x + xOrigin + j;
-                if (pixel_type == u8) {
-                    var pixel_value = frame[pixel_index / 8];
-                    frame[pixel_index / 8] = pixel_value & ~(@as(u8, 128) >> (7 - @intCast(u3, (pixel_index % 8))));
-                } else {
-                    frame[pixel_index] = black;
-                }
+                var pixel_index = ((lineHeight - yOrigin) + y + i) * screenWidth + x + xOrigin + j;
+                setBitInArray(frame, pixel_index, black);
             }
         }
     }

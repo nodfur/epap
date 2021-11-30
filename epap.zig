@@ -132,7 +132,7 @@ pub fn main() !void {
     
     var font = try text.loadFont(fontPath, fontHeight);
 
-    try text.renderText(u8, 0, font, "foo bar (void &*[]~)", frame, info.panelWidth, height, 0, 0);
+    try text.renderText(0, font, "foo bar (void &*[]~)", frame, info.panelWidth, height, 0, 0);
     try text.done();
 
     try epdClear(info, 0xff, 0);

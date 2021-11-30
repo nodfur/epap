@@ -47,9 +47,6 @@ pub fn main() !void {
         .h = @intCast(u16, height),
     };
 
-    try text.renderText(0, font, "foo", frame, info.panelWidth, 100, 0);
-    try epd.drawBitmap(rectangle, @ptrCast([*]const u8, frame), info.memoryAddress);
-
     var string = try std.heap.c_allocator.alloc(u8, 100);
     defer std.heap.c_allocator.free(string);
     std.mem.set(u8, string, 0);
@@ -61,6 +58,7 @@ pub fn main() !void {
         string[i] = c;
         i += 1;
         try text.renderText(0, font, @ptrCast([*:0]u8, string), frame, info.panelWidth, 20, 0);
+        try epd.drawBitmap(rectangle, @ptrCast([*]const u8, frame), info.memoryAddress);
     }
 
     try epd.clearScreen(info, 0xff, 0);

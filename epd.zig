@@ -506,15 +506,18 @@ pub fn epdDisplayArea(rect: Rectangle, mode: u8, address: u32) !void {
     if (mode == 6) {
         try epdWriteRegister(.up1sr_2, (try epdReadRegister(.up1sr_2)) | (1 << 2));
         try epdWriteRegister(.bgvr, 0xf0);
-var args = [_]u16{
-        rect.x,
-        rect.y,
-        rect.w,
-        rect.h,
-        mode,
-        @truncate(u16, address & 0xFFFF),
-        @truncate(u16, address >> 16),
-    };
+
+        var args = [_]u16{
+            rect.x,
+            rect.y,
+            rect.w,
+            rect.h,
+            mode,
+            @truncate(u16, address & 0xFFFF),
+            @truncate(u16, address >> 16),
+        };
+
+        std.log.info("display area args {any}", .{args});
 
         try epdWriteCommand(Commands.display_area_buf);
         try epdWriteMultiArg(&args);

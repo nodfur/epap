@@ -129,7 +129,7 @@ pub fn renderText(black: u1, font: Font, text: [*:0]const u8, frame: []u8, scree
         var x_offset = glyph_pos[i].x_offset;
         var y_offset = glyph_pos[i].y_offset;
 
-        std.log.debug("harfbuzz: x {d} advance {d} offset {d}", .{x, x_advance, x_offset});
+        // std.log.debug("harfbuzz: x {d} advance {d} offset {d}", .{x, x_advance, x_offset});
 
         try checkFreetypeError(
             c.FT_Load_Glyph(
@@ -144,7 +144,7 @@ pub fn renderText(black: u1, font: Font, text: [*:0]const u8, frame: []u8, scree
         var extents: c.hb_glyph_extents_t = undefined;
 
         if (1 == c.hb_font_get_glyph_extents(font.harfbuzz, glyph_id, &extents)) {
-            std.log.debug("harfbuzz: glyph extents {any}", .{extents});
+            // std.log.debug("harfbuzz: glyph extents {any}", .{extents});
         } else {
             std.log.err("harfbuzz: failed to get glyph extents", .{});
             return error.harfbuzz_error;

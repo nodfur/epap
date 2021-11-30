@@ -167,7 +167,8 @@ pub fn renderText(black: u1, font: Font, text: [*:0]const u8, frame: []u8, scree
 }
 
 fn getBit(bytes: []u8, bit: u32) u1 {
-    if (0 != bytes[bit / 8] & (@as(u8, 1) << @intCast(u3, bit % 8))) {
+    var mask = (@as(u8, 1) << @intCast(u3, bit % 8));
+    if (0 != bytes[bit / 8] & mask) {
         return 1;
     } else {
         return 0;

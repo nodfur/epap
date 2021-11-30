@@ -39,7 +39,7 @@ pub fn setPixelSizes(face: c.FT_Face, height: u32) !void {
     std.log.debug("freetype: set pixel size to {d}", .{height});
 }
 
-const Font = struct {
+pub const Font = struct {
     freetype: c.FT_Face,
     harfbuzz: *c.hb_font_t,
     height: u32,
@@ -63,7 +63,6 @@ pub fn loadFont(path: [*:0]const u8, height: u32) !Font {
     };
 }
 
-
 pub fn demo() !void {
     var screenWidth: u32 = 800;
     var screenHeight: u32 = 600;
@@ -82,18 +81,18 @@ pub fn demo() !void {
 
     var font = try loadFont(fontPath, fontHeight);
 
-    try renderText(1, font, "foo bar (void &*[]~) { 1 + 2 + 3 = 6; }", frame, screenWidth, 40, 40);
+    try renderText(1, font, "foo bar (void &*[]~) { 1 + 2 + 3 = 6; }", @ptrCast([*]u8, frame), screenWidth, 40, 40);
     try bitmapToPBM(frame, screenWidth, screenHeight, "frame.pbm");
     try done();
 }
 
 pub fn renderText(
-    black: u1, 
-    font: Font, 
-    text: [*:0]const u8, 
-    frame: []u8, 
-    screenWidth: u32, 
-    x0: i32, 
+    black: u1,
+    font: Font,
+    text: [*:0]const u8,
+    frame: [*]u8,
+    screenWidth: u32,
+    x0: i32,
     y0: i32,
 ) !void {
     var buffer: *c.hb_buffer_t =
@@ -116,15 +115,15 @@ pub fn renderText(
 
     var glyph_info =
         @ptrCast(
-            [*]c.hb_glyph_info_t,
-            c.hb_buffer_get_glyph_infos(buffer, &glyph_count),
-        );
+        [*]c.hb_glyph_info_t,
+        c.hb_buffer_get_glyph_infos(buffer, &glyph_count),
+    );
 
     var glyph_pos =
         @ptrCast(
-            [*]c.hb_glyph_position_t,
-            c.hb_buffer_get_glyph_positions(buffer, &glyph_count),
-        );
+        [*]c.hb_glyph_position_t,
+        c.hb_buffer_get_glyph_positions(buffer, &glyph_count),
+    );
 
     var x: i32 = x0;
     var y: i32 = y0;
@@ -139,13 +138,11 @@ pub fn renderText(
 
         // std.log.debug("harfbuzz: x {d} advance {d} offset {d}", .{x, x_advance, x_offset});
 
-        try checkFreetypeError(
-            c.FT_Load_Glyph(
-                font.freetype, 
-                glyph_id, 
-                c.FT_LOAD_RENDER | c.FT_LOAD_TARGET_MONO | c.FT_LOAD_FORCE_AUTOHINT,
-            )
-        );
+        try checkFreetypeError(c.FT_Load_Glyph(
+            font.freetype,
+            glyph_id,
+            c.FT_LOAD_RENDER | c.FT_LOAD_TARGET_MONO | c.FT_LOAD_FORCE_AUTOHINT,
+        ));
 
         // try printGlyph(font.freetype.*.glyph.*.bitmap);
 
@@ -194,9 +191,7 @@ pub fn bitmapToPBM(
 
     var writer = file.writer();
 
-    try writer.print(
-        "P1\n{d} {d}\n", .{width, height}
-    );
+    try writer.print("P1\n{d} {d}\n", .{ width, height });
 
     var i: u32 = 0;
     while (i < width * height) : (i += 1) {
@@ -205,13 +200,13 @@ pub fn bitmapToPBM(
     }
 }
 
-fn setBitInArray(bytes: []u8, index: u32, bit: u1) void {
+fn setBitInArray(bytes: [*]u8, index: u32, bit: u1) void {
     var byteIndex = @divTrunc(index, 8);
     var bitIndex = @intCast(u3, index % 8);
     bytes[byteIndex] = (bytes[byteIndex] & ~(@as(u8, 1) << bitIndex)) | (@as(u8, bit) << bitIndex);
 }
 
-pub fn drawGlyph(black: u1, frame: []u8, screenWidth: u32, x: u32, y: u32, bitmap: c.FT_Bitmap, lineHeight: u32, extents: c.hb_glyph_extents_t) !void {
+pub fn drawGlyph(black: u1, frame: [*]u8, screenWidth: u32, x: u32, y: u32, bitmap: c.FT_Bitmap, lineHeight: u32, extents: c.hb_glyph_extents_t) !void {
     var width = bitmap.width;
     var height = bitmap.rows;
     var pitch: u32 = @intCast(u32, bitmap.pitch);

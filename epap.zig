@@ -56,7 +56,7 @@ pub fn main() !void {
     std.log.info("setting bitmap to 0xf", .{});
 
     std.mem.set(u8, frame, 0xff);
-    
+
     try epd.clearScreen(info, 0xff, 0);
 
     std.log.info("drawing text in A2 mode", .{});
@@ -82,7 +82,7 @@ pub fn main() !void {
         var c = readCharacterFromStdin() catch |err| break;
         string[i] = c;
         i += 1;
-        try text.renderText(0, font, @ptrCast([*:0]u8, string), frame, info.panelWidth, 20, 0);
+        try text.renderText(0, font, @ptrCast([*:0]u8, string), @ptrCast([*]u8, frame), info.panelWidth, 20, 0);
         try epd.drawBitmap(rectangle, @ptrCast([*]const u8, frame), info.memoryAddress);
     }
 
@@ -92,4 +92,3 @@ pub fn main() !void {
     try epd.sleep();
     try text.done();
 }
-

@@ -64,7 +64,7 @@ pub fn loadFont(path: [*:0]const u8, height: u32) !Font {
 }
 
 
-pub fn main() !void {
+pub fn demo() !void {
     var screenWidth: u32 = 800;
     var screenHeight: u32 = 600;
 

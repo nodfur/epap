@@ -15,7 +15,7 @@ pub fn main() !void {
     var fontPath = "fonts/DMMono-Regular.ttf";
     var fontHeight: u32 = 36;
 
-    var info = try epd.epdInit(-1.73);
+    var info = try epd.initializeDisplay(-1.73);
 
     var height = fontHeight * 2;
 
@@ -32,7 +32,7 @@ pub fn main() !void {
     
     var font = try text.loadFont(fontPath, fontHeight);
 
-    try epd.epdClear(info, 0xff, 0);
+    try epd.clearScreen(info, 0xff, 0);
 
     std.log.info("drawing text in A2 mode", .{});
 
@@ -44,20 +44,20 @@ pub fn main() !void {
     };
 
     try text.renderText(0, font, "foo", frame, info.panelWidth, 100, 0);
-    try epd.epdDrawBitmap(rectangle, @ptrCast([*]const u8, frame), height);
+    try epd.drawBitmap(rectangle, @ptrCast([*]const u8, frame), height);
     
     try text.renderText(0, font, "bar", frame, info.panelWidth, 300, 0);
-    try epd.epdDrawBitmap(rectangle, @ptrCast([*]const u8, frame), height);
+    try epd.drawBitmap(rectangle, @ptrCast([*]const u8, frame), height);
 
     try text.renderText(0, font, "baz", frame, info.panelWidth, 500, 0);
-    try epd.epdDrawBitmap(rectangle, @ptrCast([*]const u8, frame), height);
+    try epd.drawBitmap(rectangle, @ptrCast([*]const u8, frame), height);
 
     epd.delayMs(5000);
 
-    try epd.epdClear(info, 0xff, 0);
+    try epd.clearScreen(info, 0xff, 0);
     epd.delayMs(200);
 
-    try epd.epdSleep();
+    try epd.sleep();
     try text.done();
 }
 

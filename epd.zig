@@ -318,7 +318,7 @@ pub fn epdGetSystemInfo() !SystemInfo {
     };
 }
 
-pub fn epdInit(vcom: f64) !SystemInfo {
+pub fn initializeDisplay(vcom: f64) !SystemInfo {
     epdReset();
 
     std.log.info("starting EPD", .{});
@@ -341,7 +341,7 @@ pub fn epdInit(vcom: f64) !SystemInfo {
     return info;
 }
 
-pub fn epdSleep() !void {
+pub fn sleep() !void {
     std.log.info("going to sleep", .{});
     try epdWriteCommand(Commands.sleep);
 }
@@ -390,7 +390,7 @@ pub fn fullScreenRectangle(info: SystemInfo) Rectangle {
     };
 }
 
-pub fn epdDrawBitmap(rectangle: Rectangle, frame: [*]const u8, base: u32) !void {
+pub fn drawBitmap(rectangle: Rectangle, frame: [*]const u8, base: u32) !void {
     var area = PixelArea{
         .rectangle = rectangle,
         .bitsPerPixel = PixelFormat.bpp8,
@@ -411,7 +411,7 @@ pub fn epdDrawBitmap(rectangle: Rectangle, frame: [*]const u8, base: u32) !void 
     try epdDisplayArea(area.rectangle, 6, base);
 }
 
-pub fn epdClear(info: SystemInfo, byte: u8, mode: u8) !void {
+pub fn clearScreen(info: SystemInfo, byte: u8, mode: u8) !void {
     const area = PixelArea{
         .rectangle = fullScreenRectangle(info),
         .bitsPerPixel = PixelFormat.bpp4,

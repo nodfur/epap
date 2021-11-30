@@ -143,13 +143,13 @@ pub fn main() !void {
         .h = @intCast(u16, height),
     };
 
-    try text.renderText(0, font, "foo", frame, info.panelWidth, 100, 100);
+    try text.renderText(0, font, "foo", frame, info.panelWidth, 100, 0);
     try epdDrawBitmap(rectangle, @ptrCast([*]const u8, frame), height);
     
-    try text.renderText(0, font, "bar", frame, info.panelWidth, 300, 100);
+    try text.renderText(0, font, "bar", frame, info.panelWidth, 300, 0);
     try epdDrawBitmap(rectangle, @ptrCast([*]const u8, frame), height);
 
-    try text.renderText(0, font, "baz", frame, info.panelWidth, 500, 100);
+    try text.renderText(0, font, "baz", frame, info.panelWidth, 500, 0);
     try epdDrawBitmap(rectangle, @ptrCast([*]const u8, frame), height);
 
     delayMs(5000);

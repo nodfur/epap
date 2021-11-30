@@ -4,6 +4,11 @@ const text = @import("./freetype.zig");
 
 const c_allocator = std.heap.c_allocator;
 
+fn readCharacterFromStdin() !u8 {
+    var reader = std.io.getStdIn().reader();
+    return reader.readByte();
+}
+
 pub fn main() !void {
     try epd.initializeBroadcomChip();
     defer {
@@ -44,15 +49,20 @@ pub fn main() !void {
 
     try text.renderText(0, font, "foo", frame, info.panelWidth, 100, 0);
     try epd.drawBitmap(rectangle, @ptrCast([*]const u8, frame), info.memoryAddress);
-    
-    try text.renderText(0, font, "bar", frame, info.panelWidth, 300, 0);
-    try epd.drawBitmap(rectangle, @ptrCast([*]const u8, frame), info.memoryAddress);
 
-    try text.renderText(0, font, "baz", frame, info.panelWidth, 500, 0);
-    try epd.drawBitmap(rectangle, @ptrCast([*]const u8, frame), info.memoryAddress);
+    var string = try std.heap.c_allocator.alloc(u8, 100);
+    defer std.heap.c_allocator.free(string);
+    std.mem.set(u8, string, 0);
 
-    epd.delayMs(5000);
-    
+    var i: usize = 0;
+
+    while (true) {
+        var c = readCharacterFromStdin() catch |err| break;
+        string[i] = c;
+        i += 1;
+        try text.renderText(0, font, @ptrCast([*:0]u8, string), frame, info.panelWidth, 20, 0);
+    }
+
     try epd.clearScreen(info, 0xff, 0);
     epd.delayMs(200);
 

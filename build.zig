@@ -56,6 +56,7 @@ pub fn build(b: *std.build.Builder) void {
 
     epap.linkLibrary(bcm2835);
     epap_reset.linkLibrary(bcm2835);
+    epapi.linkLibrary(bcm2835);
 
     epap.linkLibrary(freetype);
     epap_ft.linkLibrary(freetype);

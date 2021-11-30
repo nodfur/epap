@@ -132,24 +132,33 @@ pub fn main() !void {
     
     var font = try text.loadFont(fontPath, fontHeight);
 
-    try text.renderText(0, font, "foo bar (void &*[]~)", frame, info.panelWidth, 0, 0);
-    try text.done();
-
     try epdClear(info, 0xff, 0);
-    delayMs(200);
-
-    // try epdClear(info, 0xff, 2);
-    // delayMs(200);
 
     std.log.info("drawing text in A2 mode", .{});
 
-    try epdDrawBitmap(fullScreenRectangle(info), @ptrCast([*]const u8, frame), height);
+    var rectangle = Rectangle{
+        .x = 0,
+        .y = 100,
+        .w = info.panelWidth,
+        .h = @intCast(u16, height),
+    };
+
+    try text.renderText(0, font, "foo", frame, info.panelWidth, 100, 100);
+    try epdDrawBitmap(rectangle, @ptrCast([*]const u8, frame), height);
+    
+    try text.renderText(0, font, "bar", frame, info.panelWidth, 300, 100);
+    try epdDrawBitmap(rectangle, @ptrCast([*]const u8, frame), height);
+
+    try text.renderText(0, font, "baz", frame, info.panelWidth, 500, 100);
+    try epdDrawBitmap(rectangle, @ptrCast([*]const u8, frame), height);
+
     delayMs(5000);
 
     try epdClear(info, 0xff, 0);
     delayMs(200);
 
     try epdSleep();
+    try text.done();
 }
 
 fn init() !void {

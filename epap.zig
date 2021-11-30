@@ -138,7 +138,7 @@ pub fn main() !void {
 
     var rectangle = Rectangle{
         .x = 0,
-        .y = 100,
+        .y = 0,
         .w = info.panelWidth,
         .h = @intCast(u16, height),
     };

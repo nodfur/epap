@@ -138,8 +138,8 @@ pub fn main() !void {
     try epdClear(info, 0xff, 0);
     delayMs(200);
 
-    try epdClear(info, 0xff, 2);
-    delayMs(200);
+    // try epdClear(info, 0xff, 2);
+    // delayMs(200);
 
     std.log.info("drawing text in A2 mode", .{});
 

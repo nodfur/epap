@@ -139,7 +139,7 @@ pub fn renderText(black: u1, font: Font, text: [*:0]const u8, frame: []u8, scree
             )
         );
 
-        try printGlyph(font.freetype.*.glyph.*.bitmap);
+        // try printGlyph(font.freetype.*.glyph.*.bitmap);
 
         var extents: c.hb_glyph_extents_t = undefined;
 

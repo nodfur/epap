@@ -418,7 +418,7 @@ pub fn drawBitmap(rectangle: Rectangle, frame: [*]const u8, base: u32) !void {
     std.log.info("writing image", .{});
     try epdWriteImage(image, base, 6);
 
-    std.log.info("waiting for display", .{});
+    std.log.info("displaying area", .{});
     try epdDisplayArea(area.rectangle, 6, base);
 }
 

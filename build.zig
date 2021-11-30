@@ -10,6 +10,8 @@ pub fn build(b: *std.build.Builder) void {
     const epap_ft = b.addExecutable("epap-ft", "epap-ft.zig");
     const epap_reset = b.addExecutable("epap-reset", "epap-reset.zig");
 
+    const epapi = b.addSharedLibrary("epapi", "epapi.zig", .unversioned);
+
     freetype.linkSystemLibrary("c");
     freetype.linkSystemLibrary("c++");
     freetype.addIncludeDir("vendor/freetype/src");
@@ -27,35 +29,42 @@ pub fn build(b: *std.build.Builder) void {
     bcm2835.addIncludeDir("vendor/bcm2835-1.70/src");
     epap.addIncludeDir("vendor/bcm2835-1.70/src");
     epap_reset.addIncludeDir("vendor/bcm2835-1.70/src");
+    epapi.addIncludeDir("vendor/bcm2835-1.70/src");
 
     freetype.addIncludeDir("vendor/freetype/include");
     epap.addIncludeDir("vendor/freetype/include");
     epap_ft.addIncludeDir("vendor/freetype/include");
+    epapi.addIncludeDir("vendor/freetype/include");
 
     epap.addIncludeDir("vendor/harfbuzz/src");
     epap_ft.addIncludeDir("vendor/harfbuzz/src");
+    epapi.addIncludeDir("vendor/harfbuzz/src");
 
     bcm2835.setTarget(target);
     freetype.setTarget(target);
     epap.setTarget(target);
     epap_ft.setTarget(target);
     epap_reset.setTarget(target);
+    epapi.setTarget(target);
 
     bcm2835.setBuildMode(mode);
     freetype.setBuildMode(mode);
     epap.setBuildMode(mode);
     epap_ft.setBuildMode(mode);
     epap_reset.setBuildMode(mode);
+    epapi.setBuildMode(mode);
 
     epap.linkLibrary(bcm2835);
     epap_reset.linkLibrary(bcm2835);
-    epap.linkLibrary(freetype);
 
+    epap.linkLibrary(freetype);
     epap_ft.linkLibrary(freetype);
+    epapi.linkLibrary(freetype);
 
     bcm2835.install();
     freetype.install();
     epap.install();
     epap_ft.install();
     epap_reset.install();
+    epapi.install();
 }

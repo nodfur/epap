@@ -375,7 +375,7 @@ fn epdReadRegister(r: Registers) !u16 {
 
 fn epdWaitForDisplay() !void {
     var i: u32 = 0;
-    while (i < 1000) {
+    while (i < 10000) {
         if ((try epdReadRegister(Registers.lutafsr)) == 0) {
             return;
         }

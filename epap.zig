@@ -43,13 +43,13 @@ pub fn main() !void {
     };
 
     try text.renderText(0, font, "foo", frame, info.panelWidth, 100, 0);
-    try epd.drawBitmap(rectangle, @ptrCast([*]const u8, frame), height);
+    try epd.drawBitmap(rectangle, @ptrCast([*]const u8, frame), info.memoryAddress);
     
     try text.renderText(0, font, "bar", frame, info.panelWidth, 300, 0);
-    try epd.drawBitmap(rectangle, @ptrCast([*]const u8, frame), height);
+    try epd.drawBitmap(rectangle, @ptrCast([*]const u8, frame), info.memoryAddress);
 
     try text.renderText(0, font, "baz", frame, info.panelWidth, 500, 0);
-    try epd.drawBitmap(rectangle, @ptrCast([*]const u8, frame), height);
+    try epd.drawBitmap(rectangle, @ptrCast([*]const u8, frame), info.memoryAddress);
 
     epd.delayMs(5000);
     

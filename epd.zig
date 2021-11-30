@@ -103,7 +103,7 @@ pub const Image = struct {
     rotation: Rotation,
 };
 
-pub fn init() !void {
+pub fn initializeBroadcomChip() !void {
     std.log.info("starting BCM2835", .{});
 
     if (bcm2835.bcm2835_init() == 0) {
@@ -121,7 +121,7 @@ pub fn init() !void {
     gpioInit();
 }
 
-pub fn exit() !void {
+pub fn finalizeBroadcomChip() !void {
     std.log.info("closing BCM2835", .{});
 
     gpioWriteBit(Pin.cs, bcm2835.LOW);

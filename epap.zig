@@ -5,9 +5,9 @@ const text = @import("./freetype.zig");
 const c_allocator = std.heap.c_allocator;
 
 pub fn main() !void {
-    try epd.init();
+    try epd.initializeBroadcomChip();
     defer {
-        epd.exit() catch |err| std.log.err("BCM2835 exit failed", .{});
+        epd.finalizeBroadcomChip() catch |err| std.log.err("BCM2835 exit failed", .{});
     }
 
     try text.init();

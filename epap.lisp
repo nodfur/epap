@@ -8,7 +8,9 @@
 (in-package :epapi)
 
 (define-foreign-library epapi
-  (:unix "./zig-out/lib/libepapi.so"))
+  (:unix (:or "./zig-out/lib/libepapi.so"
+              "./zig-out/lib/libepapi.dylib"))
+  (:darwin "./zig-out/lib/libepapi.dylib"))
 
 (use-foreign-library epapi)
 
@@ -444,5 +446,47 @@
   (string :string)
   (len :int))
 
-;; (defcfun "hb_buffer_add_utf8" :pointer
-;;   )
+(defcfun "hb_buffer_add_utf8" :void
+  (buffer :pointer)
+  (text :string)
+  (length :int32)
+  (offset :uint32)
+  (count :int32))
+
+(defcfun "hb_shape" :void
+  (font :pointer)
+  (buffer :pointer)
+  (features :pointer)
+  (num-features :uint32))
+
+(defcstruct glyph-info
+  (codepoint :uint32)
+  (cluster :uint32))
+
+(defcstruct glyph-position
+  (x-advance :int32)
+  (y-advance :int32)
+  (x-offset :int32)
+  (y-offset :int32))
+
+(defcfun "hb_buffer_get_glyph_infos"
+    (:pointer (:struct glyph-info))
+  (buffer :pointer)
+  (glyph-count (:pointer :uint32)))
+
+(defcfun "hb_buffer_get_glyph_positions"
+    (:pointer (:struct glyph-position))
+  (buffer :pointer)
+  (glyph-count (:pointer :uint32)))
+
+(defcstruct glyph-extents
+  (x-bearing :int32)
+  (y-bearing :int32)
+  (width :int32)
+  (height :int32))
+
+(defcfun "hb_font_get_glyph_extents"
+    :bool
+  (font :pointer)
+  (glyph :uint32)
+  (extents (:pointer glyph-extents)))

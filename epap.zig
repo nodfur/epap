@@ -1,6 +1,7 @@
 const std = @import("std");
 const epd = @import("./epd.zig");
 const text = @import("./freetype.zig");
+const c = @import("./c.zig");
 
 const c_allocator = std.heap.c_allocator;
 
@@ -9,26 +10,20 @@ fn readCharacterFromStdin() !u8 {
     return reader.readByte();
 }
 
-const term = @cImport({
-    @cInclude("termios.h");
-    @cInclude("unistd.h");
-    @cInclude("stdlib.h");
-});
-
 var orig_termios: term.termios = undefined;
 
 pub fn enableRawMode() void {
-    _ = term.tcgetattr(term.STDIN_FILENO, &orig_termios);
-    _ = term.atexit(disableRawMode);
+    _ = c.tcgetattr(c.STDIN_FILENO, &orig_termios);
+    _ = c.atexit(disableRawMode);
 
-    var raw: term.termios = undefined;
-    raw.c_lflag &= ~(@as(u8, term.ECHO) | @as(u8, term.ICANON));
+    var raw: c.termios = undefined;
+    raw.c_lflag &= ~(@as(u8, c.ECHO) | @as(u8, c.ICANON));
 
-    _ = term.tcsetattr(term.STDIN_FILENO, term.TCSAFLUSH, &raw);
+    _ = c.tcsetattr(c.STDIN_FILENO, c.TCSAFLUSH, &raw);
 }
 
 pub fn disableRawMode() callconv(.C) void {
-    _ = term.tcsetattr(term.STDIN_FILENO, term.TCSAFLUSH, &orig_termios);
+    _ = c.tcsetattr(c.STDIN_FILENO, c.TCSAFLUSH, &orig_termios);
 }
 
 pub fn main() !void {

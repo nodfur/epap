@@ -1,5 +1,5 @@
 const std = @import("std");
-const bcm2835 = @cImport(@cInclude("bcm2835.h"));
+const c = @import("./c.zig");
 
 const c_allocator = std.heap.c_allocator;
 
@@ -106,17 +106,17 @@ pub const Image = struct {
 pub fn initializeBroadcomChip() !void {
     std.log.info("starting BCM2835", .{});
 
-    if (bcm2835.bcm2835_init() == 0) {
+    if (c.bcm2835_init() == 0) {
         return error.bcm2835_init_failed;
     }
 
-    if (bcm2835.bcm2835_spi_begin() == 0) {
+    if (c.bcm2835_spi_begin() == 0) {
         return error.bcm2835_spi_failed;
     }
 
-    bcm2835.bcm2835_spi_setBitOrder(bcm2835.BCM2835_SPI_BIT_ORDER_MSBFIRST);
-    bcm2835.bcm2835_spi_setDataMode(bcm2835.BCM2835_SPI_MODE0);
-    bcm2835.bcm2835_spi_setClockDivider(bcm2835.BCM2835_SPI_CLOCK_DIVIDER_32);
+    c.bcm2835_spi_setBitOrder(c.BCM2835_SPI_BIT_ORDER_MSBFIRST);
+    c.bcm2835_spi_setDataMode(c.BCM2835_SPI_MODE0);
+    c.bcm2835_spi_setClockDivider(c.BCM2835_SPI_CLOCK_DIVIDER_32);
 
     gpioInit();
 }
@@ -124,60 +124,60 @@ pub fn initializeBroadcomChip() !void {
 pub fn finalizeBroadcomChip() !void {
     std.log.info("closing BCM2835", .{});
 
-    gpioWriteBit(Pin.cs, bcm2835.LOW);
-    gpioWriteBit(Pin.rst, bcm2835.LOW);
+    gpioWriteBit(Pin.cs, c.LOW);
+    gpioWriteBit(Pin.rst, c.LOW);
 
-    bcm2835.bcm2835_spi_end();
+    c.bcm2835_spi_end();
 
-    if (bcm2835.bcm2835_close() == 0) {
+    if (c.bcm2835_close() == 0) {
         return error.bcm2835_exit_failed;
     }
 }
 
 fn gpioMode(pin: Pin, mode: u16) void {
-    bcm2835.bcm2835_gpio_fsel(@enumToInt(pin), if (mode == 0 or mode == bcm2835.BCM2835_GPIO_FSEL_INPT)
-        bcm2835.BCM2835_GPIO_FSEL_INPT
+    c.bcm2835_gpio_fsel(@enumToInt(pin), if (mode == 0 or mode == c.BCM2835_GPIO_FSEL_INPT)
+        c.BCM2835_GPIO_FSEL_INPT
     else
-        bcm2835.BCM2835_GPIO_FSEL_OUTP);
+        c.BCM2835_GPIO_FSEL_OUTP);
 }
 
 fn gpioInit() void {
     std.log.info("starting GPIO", .{});
-    gpioMode(Pin.rst, bcm2835.BCM2835_GPIO_FSEL_OUTP);
-    gpioMode(Pin.cs, bcm2835.BCM2835_GPIO_FSEL_OUTP);
-    gpioMode(Pin.busy, bcm2835.BCM2835_GPIO_FSEL_INPT);
+    gpioMode(Pin.rst, c.BCM2835_GPIO_FSEL_OUTP);
+    gpioMode(Pin.cs, c.BCM2835_GPIO_FSEL_OUTP);
+    gpioMode(Pin.busy, c.BCM2835_GPIO_FSEL_INPT);
 
-    gpioWriteBit(Pin.cs, bcm2835.HIGH);
+    gpioWriteBit(Pin.cs, c.HIGH);
 }
 
 fn gpioWriteBit(pin: Pin, value: u8) void {
-    bcm2835.bcm2835_gpio_write(@enumToInt(pin), value);
+    c.bcm2835_gpio_write(@enumToInt(pin), value);
 }
 
 fn gpioReadBit(pin: Pin) u8 {
-    return bcm2835.bcm2835_gpio_lev(@enumToInt(pin));
+    return c.bcm2835_gpio_lev(@enumToInt(pin));
 }
 
 pub fn delayMs(ms: c_uint) void {
-    bcm2835.bcm2835_delay(ms);
+    c.bcm2835_delay(ms);
 }
 
 fn delayUs(us: u64) void {
-    bcm2835.bcm2835_delayMicroseconds(us);
+    c.bcm2835_delayMicroseconds(us);
 }
 
 pub fn epdReset() void {
     std.log.info("resetting EPD", .{});
-    gpioWriteBit(Pin.rst, bcm2835.HIGH);
+    gpioWriteBit(Pin.rst, c.HIGH);
     delayMs(200);
-    gpioWriteBit(Pin.rst, bcm2835.LOW);
+    gpioWriteBit(Pin.rst, c.LOW);
     delayMs(10);
-    gpioWriteBit(Pin.rst, bcm2835.HIGH);
+    gpioWriteBit(Pin.rst, c.HIGH);
     delayMs(200);
 }
 
 fn spiWriteByte(byte: u8) void {
-    _ = bcm2835.bcm2835_spi_transfer(byte);
+    _ = c.bcm2835_spi_transfer(byte);
     // std.io.getStdOut().writer().print("{x:0>2}", .{byte}) catch |err|
     //     std.log.err("spiWriteByte failed {}", .{err});
 }
@@ -188,11 +188,11 @@ fn spiWriteWord(word: u16) !void {
 }
 
 fn gpioLow(pin: Pin) void {
-    gpioWriteBit(pin, bcm2835.LOW);
+    gpioWriteBit(pin, c.LOW);
 }
 
 fn gpioHigh(pin: Pin) void {
-    gpioWriteBit(pin, bcm2835.HIGH);
+    gpioWriteBit(pin, c.HIGH);
 }
 
 fn csLow() void {
@@ -250,7 +250,7 @@ fn epdWriteMultiArg(data: []u16) !void {
 }
 
 fn spiReadByte() u8 {
-    return bcm2835.bcm2835_spi_transfer(0x00);
+    return c.bcm2835_spi_transfer(0x00);
 }
 
 fn spiReadWord() u16 {
@@ -524,7 +524,6 @@ pub fn epdDisplayArea(rect: Rectangle, mode: u8, address: u32) !void {
 
         try epdWaitForDisplay();
         try epdWriteRegister(.up1sr_2, (try epdReadRegister(.up1sr_2)) & ~(@as(u16, 1 << 2)));
-
     } else {
         var args = [_]u16{
             rect.x,

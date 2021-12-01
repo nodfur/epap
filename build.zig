@@ -4,68 +4,45 @@ pub fn build(b: *std.build.Builder) void {
     const target = b.standardTargetOptions(.{});
     const mode = b.standardReleaseOptions();
 
-    const bcm2835 = b.addStaticLibrary("bcm2835", null);
-    const freetype = b.addStaticLibrary("freetype", null);
-    const epap = b.addExecutable("epap", "epap.zig");
-    const epap_ft = b.addExecutable("epap-ft", "epap-ft.zig");
-    const epap_reset = b.addExecutable("epap-reset", "epap-reset.zig");
+    const text = b.addSharedLibrary("epapi-text", null, .unversioned);
+    text.setTarget(target);
+    text.setBuildMode(mode);
+    text.linkSystemLibrary("c");
+    text.linkSystemLibrary("c++");
+    text.addIncludeDir(".");
+    text.addIncludeDir("vendor/bcm2835-1.70/src");
+    text.addIncludeDir("vendor/freetype/include");
+    text.addIncludeDir("vendor/freetype/src");
+    text.addIncludeDir("vendor/harfbuzz/src");
 
-    const epapi = b.addSharedLibrary("epapi", "epapi.zig", .unversioned);
+    text.addCSourceFile(
+        "freetype.c",
+        &.{"-fno-sanitize=undefined"},
+    );
 
-    freetype.linkSystemLibrary("c");
-    freetype.linkSystemLibrary("c++");
-    freetype.addIncludeDir("vendor/freetype/src");
-    freetype.addIncludeDir("vendor/harfbuzz/src");
-    freetype.addIncludeDir(".");
-    freetype.addCSourceFile("freetype.c", &.{"-fno-sanitize=undefined"});
-    freetype.addCSourceFile(
+    text.addCSourceFile(
         "vendor/harfbuzz/src/harfbuzz.cc",
         &.{ "-DHAVE_FREETYPE", "-fno-sanitize=undefined" },
     );
 
-    bcm2835.linkSystemLibrary("c");
-    bcm2835.addCSourceFile("vendor/bcm2835-1.70/src/bcm2835.c", &.{"-fno-sanitize=undefined"});
+    const epapi = b.addSharedLibrary("epapi", "epapi.zig", .unversioned);
 
-    bcm2835.addIncludeDir("vendor/bcm2835-1.70/src");
-    epap.addIncludeDir("vendor/bcm2835-1.70/src");
-    epap_reset.addIncludeDir("vendor/bcm2835-1.70/src");
+    epapi.setTarget(target);
+    epapi.setBuildMode(mode);
+    epapi.linkSystemLibrary("c");
+    epapi.linkSystemLibrary("c++");
+    epapi.linkLibrary(text);
+
+    epapi.addIncludeDir(".");
     epapi.addIncludeDir("vendor/bcm2835-1.70/src");
-
-    freetype.addIncludeDir("vendor/freetype/include");
-    epap.addIncludeDir("vendor/freetype/include");
-    epap_ft.addIncludeDir("vendor/freetype/include");
     epapi.addIncludeDir("vendor/freetype/include");
-
-    epap.addIncludeDir("vendor/harfbuzz/src");
-    epap_ft.addIncludeDir("vendor/harfbuzz/src");
     epapi.addIncludeDir("vendor/harfbuzz/src");
 
-    bcm2835.setTarget(target);
-    freetype.setTarget(target);
-    epap.setTarget(target);
-    epap_ft.setTarget(target);
-    epap_reset.setTarget(target);
-    epapi.setTarget(target);
+    epapi.addCSourceFile(
+        "vendor/bcm2835-1.70/src/bcm2835.c",
+        &.{"-fno-sanitize=undefined"},
+    );
 
-    bcm2835.setBuildMode(mode);
-    freetype.setBuildMode(mode);
-    epap.setBuildMode(mode);
-    epap_ft.setBuildMode(mode);
-    epap_reset.setBuildMode(mode);
-    epapi.setBuildMode(mode);
-
-    epap.linkLibrary(bcm2835);
-    epap_reset.linkLibrary(bcm2835);
-    epapi.linkLibrary(bcm2835);
-
-    epap.linkLibrary(freetype);
-    epap_ft.linkLibrary(freetype);
-    epapi.linkLibrary(freetype);
-
-    bcm2835.install();
-    freetype.install();
-    epap.install();
-    epap_ft.install();
-    epap_reset.install();
+    text.install();
     epapi.install();
 }

@@ -1,10 +1,5 @@
 const std = @import("std");
-const c = @cImport({
-    @cInclude("ft2build.h");
-    @cInclude("freetype/freetype.h");
-    @cInclude("freetype/ftglyph.h");
-    @cInclude("hb-ft.h");
-});
+const c = @import("./c.zig");
 
 var library: c.FT_Library = null;
 

@@ -59,12 +59,26 @@
 (defvar *base-address*)
 (defvar *c-frame*)
 
+(defvar *text-initialized* nil)
+
 (defvar *font-cozette*
   (foreign-alloc '(:struct font-data)))
 
 (define-condition epapi-error (error)
   ((function :initarg :function-name :reader epapi-error-function)
    (args :initarg :args :reader epapi-error-args)))
+
+(define-condition failed-equality-assertion (error)
+  ((actual :initarg :actual :reader assertion-actual)
+   (expected :initarg :expected :reader assertion-expected))
+
+  (:report (lambda (condition stream)
+             (format stream "Expected: ~A~%  Actual: ~A"
+                     (assertion-expected condition)
+                     (assertion-actual condition)))))
+
+
+(define-condition test-ok (condition) ())
 
 (defmacro try (body)
   (let ((v (gensym))
@@ -114,11 +128,27 @@
                  do (setf (bit bit-array y x)
                           (if (logbitp (mod x 8) byte) 1 0)))))))
 
+(defmacro assert-equalp (actual expected)
+  (let ((a (gensym))
+        (e (gensym)))
+    `(let ((,a ,actual)
+           (,e ,expected))
+       (if (equalp ,a ,e)
+           (signal 'test-ok)
+           (error 'failed-equality-assertion :expected ,e :actual ,a)))))
+
+(defun unit-test ()
+  (assert-equalp
+   (byte-vector->bit-array #(1) 1 8)
+   (make-array '(8 1)
+               :element-type 'bit
+               :initial-contents '((1) (0) (0) (0) (0) (0) (0) (0)))))
+
 (defun foo ()
   (let* ((*display-width* 32)
          (*display-height* 24)
          (*c-frame* (allocate-c-frame)))
-    (try (epap-render-text *font-cozette* "foo" *c-frame* *display-width* 0 0))
+    (try (epap-render-text *font-cozette* "--" *c-frame* *display-width* 0 0))
     (let ((array (foreign-array-to-lisp
                   *c-frame*
                   (list :array :uint8 (display-bitmap-size))
@@ -127,16 +157,13 @@
       (prog1 (byte-vector->bit-array array *display-width* *display-height*)
         (foreign-array-free *c-frame*)))))
 
-(defun test-text (font-path font-height width)
+(defun start-text ()
   (try (epap-start-text))
-  (try (epap-load-font "./fonts/cozette.bdf" 13 *font-cozette*))
-  (try (epap-render-text *font-cozette* "foo" *c-frame* *display-width* 0 0)))
+  (try (epap-load-font "./fonts/cozette.bdf" 13 *font-cozette*)))
 
-(defun c-frame-to-lisp ()
-  (let ((array (make-array (list *display-width* *display-height*)
-                           :element-type bit)))
-    (loop for y from 0 below *display-height*
-          for x from 0 below *display-width*
-          with pixel = (foreign-aref *c-frame* '())
-          ))
-  )
+(unless *text-initialized*
+  (start-text)
+  (setf *text-initialized* t))
+
+(defun test-text (font-path font-height width)
+  (try (epap-render-text *font-cozette* "foo" *c-frame* *display-width* 0 0)))

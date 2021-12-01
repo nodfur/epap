@@ -217,7 +217,7 @@
     (cs-high)))
 
 (defun bpp-pixel-format (bits)
-  (case bits
+  (ecase bits
     (2 0)
     (3 1)
     (4 2)
@@ -396,3 +396,53 @@
   (try (epap-render-text *font-cozette* "foo" *c-frame* *display-width* 0 0)))
 
 (unit-test)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defcfun "FT_Init_FreeType" :int32 (library :pointer))
+(defcfun "FT_Done_FreeType" :int32 (library :pointer))
+
+(defcfun "FT_New_Face" :int32
+  (library :pointer)
+  (path :string)
+  (face-index :long)
+  (face-ptr :pointer))
+
+(defcfun "FT_Set_Pixel_Sizes" :int32
+  (face :pointer)
+  (width :uint32)
+  (height :uint32))
+
+(defcfun "hb_ft_font_create_referenced" :pointer
+  (freetype-font :pointer))
+
+(defcfun "hb_ft_font_set_funcs" :void
+  (font :pointer))
+
+(defcfun "hb_buffer_create" :pointer)
+
+(defcenum hb-direction
+  :invalid :left-to-right :right-to-left :top-to-bottom :bottom-to-top)
+
+(defcfun "hb_buffer_set_direction" :void
+  (buffer :pointer)
+  (direction hb-direction))
+
+(defcfun "hb_script_from_string" :uint32
+  (string :string)
+  (len :int))
+
+(defcfun "hb_buffer_set_script" :void
+  (buffer :pointer)
+  (script :uint32))
+
+(defcfun "hb_buffer_set_language" :void
+  (buffer :pointer)
+  (language :pointer))
+
+(defcfun "hb_language_from_string" :pointer
+  (string :string)
+  (len :int))
+
+;; (defcfun "hb_buffer_add_utf8" :pointer
+;;   )

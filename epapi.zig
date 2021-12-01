@@ -47,3 +47,8 @@ export fn epap_render_text(
     text.renderText(0, font.*, string, bitmap, screen_width, x, y) catch |err| return 1;
     return 0;
 }
+
+export fn epap_wait_for_display() u32 {
+    epd.epdWaitForDisplay() catch |err| return 1;
+    return 0;
+}

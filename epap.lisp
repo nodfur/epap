@@ -73,11 +73,72 @@
 (defcfun "bcm2835_spi_transfer" :uint8
   (value :uint8))
 
+(deftype pin ()
+  '(member :rst :cs :busy))
+
+(deftype packet-type ()
+  '(member :read :write :command))
+
+(deftype command-id ()
+  '(member
+    :run :standby :sleep :read-register :write-register
+    :vcom :dev-info :load-img-area-start :load-img-end
+    :display-area :display-area-buf))
+
+(deftype register ()
+  '(member
+    :I80CPCR
+    :LISAR
+    :LISAR+2
+    :LUTAFSR
+    :UP1SR+2
+    :BGVR))
+
+(defun register-number (register)
+  (ecase register
+    (:I80CPCR #x4)
+    (:LISAR #x208)
+    (:LISAR+2 (+ 2 #x208))
+    (:LUTAFSR #x1224)
+    (:UP1SR+2 (+ 2 #x138))
+    (:BGVR #x1250)))
+
+(defun pin-number (pin)
+  (ecase pin
+    (:rst 17)
+    (:cs 8)
+    (:busy 24)))
+
+(defun packet-type-number (packet-type)
+  (ecase packet-type
+    (:read #x1000)
+    (:write #x0000)
+    (:command #x6000)))
+
+(defun command-number (command-id)
+  (ecase command-id
+    (:run #x1)
+    (:standby #x2)
+    (:sleep #x3)
+    (:read-register #x10)
+    (:write-register #x11)
+    (:vcom #x39)
+    (:dev-info #x302)
+    (:load-img-area-start #x21)
+    (:load-img-end #x22)
+    (:display-area #x34)
+    (:display-area-buf #x37)))
+
 (defun gpio-write (pin bit)
-  (bcm2835-gpio-write pin bit))
+  (bcm2835-gpio-write (pin-number pin) bit))
 
 (defun gpio-read (pin)
-  (bcm2835-gpio-lev pin))
+  (bcm2835-gpio-lev (pin-number pin)))
+
+(defun gpio-wait ()
+  (loop repeat 10000000
+        when (= 1 (gpio-read :busy))
+          return t))
 
 (defun delay-milliseconds (ms)
   (bcm2835-delay ms))
@@ -92,50 +153,25 @@
   (spi-write-byte (ldb (byte 8 8) x))
   (spi-write-byte (ldb (byte 8 0) x)))
 
-(defvar *pin-rst* 17)
-(defvar *pin-cs* 8)
-(defvar *pin-busy* 24)
-
-(defun gpio-wait ()
-  (loop repeat 10000000
-        when (= 1 (gpio-read *pin-busy*))
-          return t))
-
-(defvar *packet-type-write* #x0000)
-(defvar *packet-type-read* #x1000)
-(defvar *packet-type-command* #x6000)
-
-(defvar *cmd-run* #x1)
-(defvar *cmd-standby* #x2)
-(defvar *cmd-sleep* #x03)
-(defvar *cmd-read-register* #x10)
-(defvar *cmd-write-register* #x11)
-(defvar *cmd-vcom* #x39)
-(defvar *cmd-dev-info* #x302)
-(defvar *cmd-load-img-area-start* #x21)
-(defvar *cmd-load-img-end* #x22)
-(defvar *cmd-display-area* #x34)
-(defvar *cmd-display-area-buf* #x37)
-
 (defun cs-low ()
-  (gpio-write *pin-cs* 0))
+  (gpio-write :cs 0))
 
 (defun cs-high ()
-  (gpio-write *pin-cs* 1))
+  (gpio-write :cs 1))
 
 (defun start-packet (packet-type)
   (gpio-wait)
   (cs-low)
-  (spi-write-word packet-type)
+  (spi-write-word (packet-type-number packet-type))
   (gpio-wait))
 
 (defun write-command (cmd)
-  (start-packet *packet-type-command*)
-  (spi-write-word cmd)
+  (start-packet :command)
+  (spi-write-word (command-number cmd))
   (cs-high))
 
 (defun write-word-packet (word)
-  (start-packet *packet-type-write*)
+  (start-packet :write)
   (spi-write-word word)
   (cs-high))
 
@@ -144,8 +180,8 @@
         do (write-word-packet word)))
 
 (defun write-register (register value)
-  (write-command *cmd-write-register*)
-  (write-word-packet register)
+  (write-command :write-register)
+  (write-word-packet (register-number register))
   (write-word-packet value))
 
 (defun spi-read-byte ()
@@ -162,14 +198,16 @@
     (dpb high (byte 16 16) low)))
 
 (defun spi-read-bytes (count)
-  (make-array
-   (list count)
-   :element-type '(unsigned-byte 8)
-   :initial-contents (loop repeat count
-                           collect (spi-read-byte))))
+  ;; slightly inefficient
+  (remove-if #'zerop
+             (make-array
+              (list count)
+              :element-type '(unsigned-byte 8)
+              :initial-contents (loop repeat count
+                                      collect (spi-read-byte)))))
 
 (defun start-reading ()
-  (start-packet *packet-type-read*)
+  (start-packet :read)
   (spi-read-word) ;; read a dummy word
   (gpio-wait))
 
@@ -178,19 +216,6 @@
   (prog1 (spi-read-word)
     (cs-high)))
 
-(defvar *mcsr-base-address* #x200)
-(defvar *display-reg-base* #x1000)
-
-(defvar *reg-i80cpcr* #x4)
-(defvar *reg-lisar-0* (+ *mcsr-base-address* #x8))
-(defvar *reg-lisar-2* (+ *reg-lisar0* 2))
-(defvar *reg-lutafsr* (+ *display-reg-base* #x224))
-(defvar *reg-up1sr-2* (+ *display-reg-base* #x138 2))
-(defvar *reg-bgvr* (+ *display-reg-base* #x250))
-
-(defvar *little-endian* 0)
-(defvar *big-endian* 1)
-
 (defun bpp-pixel-format (bits)
   (case bits
     (2 0)
@@ -198,15 +223,13 @@
     (4 2)
     (8 3)))
 
-(defvar *rotation-0* 0)
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defstruct system-info
   width height address firmware-version lut-version)
 
 (defun get-system-info ()
-  (write-command *cmd-dev-info*)
+  (write-command :dev-info)
   (start-reading)
   (prog1
       (make-system-info
@@ -220,24 +243,27 @@
     (cs-high)))
 
 (defun reset-display ()
-  (gpio-write *pin-rst* 1)
+  (gpio-write :rst 1)
   (delay-milliseconds 200)
-  (gpio-write *pin-rst* 0)
+  (gpio-write :rst 0)
   (delay-milliseconds 10)
-  (gpio-write *pin-rst* 1)
+  (gpio-write :rst 1)
   (delay-milliseconds 200))
 
 (defun set-vcom (vcom)
-  (write-command *cmd-vcom*)
+  (write-command :vcom)
   (write-word-packet 1)
   (write-word-packet (round (* 1000 (abs vcom)))))
 
 (defun initialize-display (vcom)
   (reset-display)
-  (write-command *cmd-run*)
+  (write-command :run)
   (prog1 (get-system-info)
-    (write-register *reg-i80cpcr* 1)
+    (write-register :I80CPCR 1)
     (set-vcom vcom)))
+
+(defun trace-cmd ()
+  (trace write-command write-register write-word-packet))
 
 (defun trace-io ()
   (trace

@@ -484,11 +484,11 @@
   (features :pointer)
   (num-features :uint32))
 
-(defcstruct glyph-info
+(defcstruct (glyph-info :size 20)
   (codepoint :uint32)
-  (cluster :uint32))
+  (cluster :uint32 :offset 8))
 
-(defcstruct glyph-position
+(defcstruct (glyph-position :size 20)
   (x-advance :int32)
   (y-advance :int32)
   (x-offset :int32)

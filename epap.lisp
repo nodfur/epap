@@ -7,57 +7,71 @@
 
 (in-package :epapi)
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-condition failed-equality-assertion (error)
+  ((actual :initarg :actual :reader assertion-actual)
+   (expected :initarg :expected :reader assertion-expected))
+
+  (:report (lambda (condition stream)
+             (format stream "Expected: ~A~%  Actual: ~A"
+                     (assertion-expected condition)
+                     (assertion-actual condition)))))
+
+(define-condition test-ok (condition) ())
+
+(defmacro assert-equalp (actual expected)
+  (let ((a (gensym))
+        (e (gensym)))
+    `(let ((,a ,actual)
+           (,e ,expected))
+       (if (equalp ,a ,e)
+           (signal 'test-ok)
+           (error 'failed-equality-assertion :expected ,e :actual ,a)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (define-foreign-library epapi
   (:unix (:or "./zig-out/lib/libepapi.so"
-              "./zig-out/lib/libepapi.dylib"))
-  (:darwin "./zig-out/lib/libepapi.dylib"))
+              "./zig-out/lib/libepapi.dylib")))
 
 (use-foreign-library epapi)
 
-(defun reload ()
-  (uiop:run-program "make" :output t)
-  (use-foreign-library epapi))
-
-(defcfun "epap_start_broadcom" :uint32)
-(defcfun "epap_stop_broadcom" :uint32)
-(defcfun "epap_start_text" :uint32)
-
-(defcstruct display-info
-  (panel-width :uint16)
-  (panel-height :uint16)
-  (base-address :uint32)
-  (firmware-version :char :count 16)
-  (lut-version :char :count 16))
-
-(defcstruct font-data
-  (freetype-ptr :pointer)
-  (harfbuzz-ptr :pointer))
-
-(defcfun "epap_start_display" :uint32
-  (vcom :double)
-  (info (:pointer (:struct display-info))))
-
-(defcfun "epap_sleep" :uint32)
-
-(defcfun "epap_clear" :uint32
-  (info (:pointer (:struct display-info)))
-  (byte :uint8)
-  (mode :uint8))
-
-(defcfun "epap_load_font" :uint32
-  (path :string)
-  (height :uint32)
-  (font (:pointer (:struct font-data))))
-
-(defcfun "epap_render_text" :uint32
-  (font (:pointer (:struct font-data)))
-  (string :string)
-  (bitmap (:pointer :uint8))
-  (screen-width :uint32)
-  (x :uint32)
-  (y :uint32))
+;; (defcfun "epap_render_text" :uint32
+;;   (font (:pointer (:struct font-data)))
+;;   (string :string)
+;;   (bitmap (:pointer :uint8))
+;;   (screen-width :uint32)
+;;   (x :uint32)
+;;   (y :uint32))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defcenum (spi-bit-order :uint8)
+  :least-significant-bit-first
+  :most-significant-bit-first)
+
+(defcenum (spi-data-mode :uint8)
+  :mode-0 :mode-1 :mode-2 :mode-3)
+
+(defcenum (spi-clock-divider :uint16)
+  (:divider-32 32)
+  (:divider-16 16))
+
+(defcenum (gpio-function-select :uint8)
+  :input :output)
+
+(defcfun "bcm2835_init" :boolean)
+(defcfun "bcm2835_close" :boolean)
+(defcfun "bcm2835_spi_begin" :boolean)
+(defcfun "bcm2835_spi_end" :boolean)
+
+(defcfun "bcm2835_spi_setBitOrder" :void
+  (order spi-bit-order))
+(defcfun "bcm2835_spi_setDataMode" :void
+  (mode spi-data-mode))
+(defcfun "bcm2835_spi_setClockDivider" :void
+  (divider spi-clock-divider))
 
 (defcfun "bcm2835_gpio_write" :void
   (pin :uint8)
@@ -65,6 +79,10 @@
 
 (defcfun "bcm2835_gpio_lev" :uint8
   (pin :uint8))
+
+(defcfun "bcm2835_gpio_fsel" :void
+  (pin :uint8)
+  (mode gpio-function-select))
 
 (defcfun "bcm2835_delay" :void
   (milliseconds :uint32))
@@ -131,8 +149,30 @@
     (:display-area #x34)
     (:display-area-buf #x37)))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun initialize-bcm2835 ()
+  (unless (bcm2835-init)
+    (error "bcm2835_init failed"))
+  (unless (bcm2835-spi-begin)
+    (error "bcm2835_spi_begin failed"))
+
+  (bcm2835-spi-setBitOrder :most-significant-bit-first)
+  (bcm2835-spi-setDataMode :mode-0)
+  (bcm2835-spi-setClockDivider :divider-32))
+
 (defun gpio-write (pin bit)
   (bcm2835-gpio-write (pin-number pin) bit))
+
+(defun close-bcm2835 ()
+  (gpio-write :cs 0)
+  (gpio-write :rst 0)
+  (bcm2835-spi-end)
+  (unless (bcm2835-close)
+    (error "bcm2835_close failed")))
+
+(defun gpio-mode (pin mode)
+  (bcm2835-gpio-fsel (pin-number pin) mode))
 
 (defun gpio-read (pin)
   (bcm2835-gpio-lev (pin-number pin)))
@@ -160,6 +200,12 @@
 
 (defun cs-high ()
   (gpio-write :cs 1))
+
+(defun initialize-gpio ()
+  (gpio-mode :rst :output)
+  (gpio-mode :cs :output)
+  (gpio-mode :busy :input)
+  (cs-high))
 
 (defun start-packet (packet-type)
   (gpio-wait)
@@ -257,12 +303,15 @@
   (write-word-packet 1)
   (write-word-packet (round (* 1000 (abs vcom)))))
 
-(defun initialize-display (vcom)
+(defun initialize-display ()
   (reset-display)
   (write-command :run)
   (prog1 (get-system-info)
     (write-register :I80CPCR 1)
-    (set-vcom vcom)))
+    (set-vcom *vcom*)))
+
+(defun enter-sleep-mode ()
+  (write-command :sleep))
 
 (defun trace-cmd ()
   (trace write-command write-register write-word-packet))
@@ -272,43 +321,27 @@
    spi-write-word spi-write-byte
    spi-read-word spi-read-byte spi-read-address spi-read-bytes))
 
-(defun boot ()
-  (epap-start-broadcom)
-  (unwind-protect
-       (initialize-display -1.73)
-    (epap-sleep)
-    (epap-stop-broadcom)))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defvar *vcom* -1.73)
 (defvar *display-width*)
 (defvar *display-height*)
 (defvar *base-address*)
 (defvar *c-frame*)
 
+(defun boot ()
+  (initialize-bcm2835)
+  (initialize-gpio)
+  (unwind-protect
+       (initialize-display)
+    (enter-sleep-mode)
+    (close-bcm2835)))
+
 (defvar *text-initialized* nil)
-
-(defvar *font-cozette*
-  (foreign-alloc '(:struct font-data)))
-
-(defvar *font-dm-mono*
-  (foreign-alloc '(:struct font-data)))
 
 (define-condition epapi-error (error)
   ((function :initarg :function-name :reader epapi-error-function)
    (args :initarg :args :reader epapi-error-args)))
-
-(define-condition failed-equality-assertion (error)
-  ((actual :initarg :actual :reader assertion-actual)
-   (expected :initarg :expected :reader assertion-expected))
-
-  (:report (lambda (condition stream)
-             (format stream "Expected: ~A~%  Actual: ~A"
-                     (assertion-expected condition)
-                     (assertion-actual condition)))))
-
-
-(define-condition test-ok (condition) ())
 
 (defmacro try (body)
   (let ((v (gensym))
@@ -319,17 +352,6 @@
            nil
            (error 'epapi-error :function ',fn :args ',args)))))
 
-(defun read-display-info ()
-  (with-foreign-object (info '(:struct display-info))
-    (prog1 info
-      (try (epap-start-display -1.73d0 info))
-      (with-foreign-slots
-          ((panel-width panel-height base-address)
-           info (:struct display-info))
-        (setf *display-width* panel-width
-              *display-height* panel-height
-              *base-address* base-address)))))
-
 (defun display-bitmap-size ()
   (/ (* *display-width* *display-height*) 8))
 
@@ -337,16 +359,6 @@
   (foreign-alloc :uint8
                  :initial-element #xFF
                  :count (display-bitmap-size)))
-
-(defun test ()
-  (try (epap-start-broadcom))
-  (let ((info (read-display-info)))
-    (print :clearing-white-init)
-    (try (epap-clear info #xff 0)))
-  (setf *c-frame* (allocate-c-frame))
-  (print :sleeping)
-  (try (epap-sleep))
-  (try (epap-stop-broadcom)))
 
 (defun byte-vector->bit-array (array width height)
   (let ((bit-array (make-array (list height width) :element-type 'bit)))
@@ -360,15 +372,6 @@
                   (setf (bit bit-array y x)
                         (if (logbitp (mod pixel-index 8) byte) 1 0))))))))
 
-(defmacro assert-equalp (actual expected)
-  (let ((a (gensym))
-        (e (gensym)))
-    `(let ((,a ,actual)
-           (,e ,expected))
-       (if (equalp ,a ,e)
-           (signal 'test-ok)
-           (error 'failed-equality-assertion :expected ,e :actual ,a)))))
-
 (defun unit-test ()
   (assert-equalp
    (byte-vector->bit-array #(1) 1 8)
@@ -376,34 +379,36 @@
                :element-type 'bit
                :initial-contents '((1) (0) (0) (0) (0) (0) (0) (0)))))
 
-(defun foo ()
-  (let* ((*display-width* 32)
-         (*display-height* 24)
-         (*c-frame* (allocate-c-frame)))
-    (try (epap-render-text *font-cozette* "Hey!" *c-frame* *display-width* 0 0))
-    (let ((array (foreign-array-to-lisp
-                  *c-frame*
-                  (list :array :uint8 (display-bitmap-size))
-                  :element-type :unsigned-byte)))
-      (prin1 array)
-      (prog1 (byte-vector->bit-array array *display-width* *display-height*)
-        (foreign-array-free *c-frame*)))))
+;; (defun foo ()
+;;   (let* ((*display-width* 32)
+;;          (*display-height* 24)
+;;          (*c-frame* (allocate-c-frame)))
+;;     (try (epap-render-text *font-cozette* "Hey!" *c-frame* *display-width* 0 0))
+;;     (let ((array (foreign-array-to-lisp
+;;                   *c-frame*
+;;                   (list :array :uint8 (display-bitmap-size))
+;;                   :element-type :unsigned-byte)))
+;;       (prin1 array)
+;;       (prog1 (byte-vector->bit-array array *display-width* *display-height*)
+;;         (foreign-array-free *c-frame*)))))
 
-(defun start-text ()
-  (try (epap-start-text))
-  (try (epap-load-font "./fonts/cozette.bdf" 13 *font-cozette*))
-  (try (epap-load-font "./fonts/DMMono-Regular.ttf" 9 *font-dm-mono*)))
+;; (defun start-text ()
+;;   (try (epap-start-text))
+;;   (try (epap-load-font "./fonts/cozette.bdf" 13 *font-cozette*))
+;;   (try (epap-load-font "./fonts/DMMono-Regular.ttf" 9 *font-dm-mono*)))
 
-(unless *text-initialized*
-  (start-text)
-  (setf *text-initialized* t))
+;; (unless *text-initialized*
+;;   (start-text)
+;;   (setf *text-initialized* t))
 
-(defun test-text (font-path font-height width)
-  (try (epap-render-text *font-cozette* "foo" *c-frame* *display-width* 0 0)))
+;; (defun test-text (font-path font-height width)
+;;   (try (epap-render-text *font-cozette* "foo" *c-frame* *display-width* 0 0)))
 
 (unit-test)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defcfun "FT_Error_String" :string (error-code :int32))
 
 (defcfun "FT_Init_FreeType" :int32 (library :pointer))
 (defcfun "FT_Done_FreeType" :int32 (library :pointer))
@@ -489,14 +494,38 @@
   (num-features :uint32))
 
 (defcstruct (glyph-info :size 20)
-  (codepoint :uint32)
-  (cluster :uint32 :offset 8))
+  (:codepoint :uint32)
+  (:cluster :uint32 :offset 8))
 
 (defcstruct (glyph-position :size 20)
-  (x-advance :int32)
-  (y-advance :int32)
-  (x-offset :int32)
-  (y-offset :int32))
+  (:x-advance :int32)
+  (:y-advance :int32)
+  (:x-offset :int32)
+  (:y-offset :int32))
+
+(defcstruct (glyph-extents)
+  (:x-bearing :int32)
+  (:y-bearing :int32)
+  (:width :int32)
+  (:height :int32))
+
+;; (defstruct glyph-info
+;;   codepoint cluster)
+
+;; (defstruct glyph-position
+;;   x-offset y-offset x-advance y-advance)
+
+;; (defstruct glyph-extents
+;;   x-bearing y-bearing width height)
+
+;; (defmethod translate-from-foreign (pointer (type %glyph-info))
+;;   (apply #'make-glyph-info (call-next-method)))
+
+;; (defmethod translate-from-foreign (pointer (type %glyph-position))
+;;   (apply #'make-glyph-position (call-next-method)))
+
+;; (defmethod translate-from-foreign (pointer (type %glyph-extents))
+;;   (apply #'make-glyph-extents (call-next-method)))
 
 (defcfun "hb_buffer_get_glyph_infos"
     (:pointer (:struct glyph-info))
@@ -511,17 +540,57 @@
   (buffer :pointer)
   (glyph-count (:pointer :uint32)))
 
-(defcstruct glyph-extents
-  (x-bearing :int32)
-  (y-bearing :int32)
-  (width :int32)
-  (height :int32))
-
 (defcfun "hb_font_get_glyph_extents"
     :bool
   (font :pointer)
   (glyph :uint32)
   (extents (:pointer glyph-extents)))
+
+(define-condition freetype-error (error)
+  ((code :initarg :code :reader freetype-error-code)))
+
+(defun check-freetype-result (result)
+  (unless (zerop result)
+    (error 'freetype-error :code result)))
+
+(defun initialize-freetype ()
+  (let ((freetype (foreign-alloc :pointer)))
+    (check-freetype-result
+     (ft-init-freetype freetype))
+    (mem-ref freetype :pointer)))
+
+(defstruct font
+  height
+  freetype-ptr
+  harfbuzz-ptr)
+
+(defun load-font (path height)
+  (let* ((freetype-ptr (load-freetype-font path height))
+         (harfbuzz-ptr (hb-ft-font-create-referenced freetype-ptr)))
+    (hb-ft-font-set-funcs harfbuzz-ptr)
+    (make-font
+     :height height
+     :freetype-ptr freetype-ptr
+     :harfbuzz-ptr harfbuzz-ptr)))
+
+(defvar *freetype* (initialize-freetype))
+
+;; (setf *freetype* (initialize-freetype))
+
+(defun load-freetype-font (path height)
+  (let ((face-ptr (foreign-alloc :pointer)))
+    (check-freetype-result
+     (ft-new-face *freetype* path 0 face-ptr))
+    (let ((face (mem-ref face-ptr :pointer)))
+      (prog1 face
+        (check-freetype-result
+         (ft-set-pixel-sizes face 0 height))))))
+
+(defvar *font-cozette*
+  (load-font "./fonts/cozette.bdf" 13))
+
+(defvar *font-dm-mono*
+  (load-font "./fonts/DMMono-Regular.ttf" 9))
 
 (defun shape-text (text &key
                           font
@@ -550,10 +619,23 @@
 (assert-equalp
  (shape-text
   "xyz"
-  :font (foreign-slot-value *font-cozette* '(:struct font-data) 'harfbuzz-ptr))
- '(#((cluster 0 codepoint 121)
-     (cluster 1 codepoint 122)
-     (cluster 2 codepoint 123))
-   #((y-offset 0 x-offset 0 y-advance 0 x-advance 384)
-     (y-offset 0 x-offset 0 y-advance 0 x-advance 384)
-     (y-offset 0 x-offset 0 y-advance 0 x-advance 384))))
+  :font (font-harfbuzz-ptr *font-cozette*))
+ (list #((:cluster 0 :codepoint 121)
+         (:cluster 1 :codepoint 122)
+         (:cluster 2 :codepoint 123))
+       #((:y-offset 0 :x-offset 0 :y-advance 0 :x-advance 384)
+         (:y-offset 0 :x-offset 0 :y-advance 0 :x-advance 384)
+         (:y-offset 0 :x-offset 0 :y-advance 0 :x-advance 384))))
+
+(defun bar ()
+  (let* ((*display-width* 32)
+         (*display-height* 24)
+         (*c-frame* (allocate-c-frame)))
+    (try (epap-render-text *font-cozette* "Hey!" *c-frame* *display-width* 0 0))
+    (let ((array (foreign-array-to-lisp
+                  *c-frame*
+                  (list :array :uint8 (display-bitmap-size))
+                  :element-type :unsigned-byte)))
+      (prin1 array)
+      (prog1 (byte-vector->bit-array array *display-width* *display-height*)
+        (foreign-array-free *c-frame*)))))

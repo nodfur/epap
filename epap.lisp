@@ -291,6 +291,9 @@
 (defvar *font-cozette*
   (foreign-alloc '(:struct font-data)))
 
+(defvar *font-dm-mono*
+  (foreign-alloc '(:struct font-data)))
+
 (define-condition epapi-error (error)
   ((function :initarg :function-name :reader epapi-error-function)
    (args :initarg :args :reader epapi-error-args)))
@@ -388,7 +391,8 @@
 
 (defun start-text ()
   (try (epap-start-text))
-  (try (epap-load-font "./fonts/cozette.bdf" 13 *font-cozette*)))
+  (try (epap-load-font "./fonts/cozette.bdf" 13 *font-cozette*))
+  (try (epap-load-font "./fonts/DMMono-Regular.ttf" 9 *font-dm-mono*)))
 
 (unless *text-initialized*
   (start-text)
@@ -433,7 +437,7 @@
     (:force-autohint (ash 1 5))))
 
 (defun make-load-flags (flags)
-  (apply #'logior (mapcar flags ) ))
+  (apply #'logior (mapcar #'load-flag-number flags)))
 
 (defcfun "hb_ft_font_create_referenced" :pointer
   (freetype-font :pointer))
@@ -540,9 +544,16 @@
                 (hb-buffer-get-glyph-positions buffer glyph-count)
                 `(:array (:struct glyph-position) ,(mem-aref glyph-count :uint32)))))
         (prog1
-            (list (hb-buffer-has-positions buffer) glyph-infos glyph-positions)
+            (list glyph-infos glyph-positions)
           (hb-buffer-destroy buffer))))))
 
-(shape-text
- "foo"
- :font (foreign-slot-value *font-cozette* '(:struct font-data) 'harfbuzz-ptr))
+(assert-equalp
+ (shape-text
+  "xyz"
+  :font (foreign-slot-value *font-cozette* '(:struct font-data) 'harfbuzz-ptr))
+ '(#((cluster 0 codepoint 121)
+     (cluster 1 codepoint 122)
+     (cluster 2 codepoint 123))
+   #((y-offset 0 x-offset 0 y-advance 0 x-advance 384)
+     (y-offset 0 x-offset 0 y-advance 0 x-advance 384)
+     (y-offset 0 x-offset 0 y-advance 0 x-advance 384))))

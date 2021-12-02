@@ -542,3 +542,7 @@
         (prog1
             (list (hb-buffer-has-positions buffer) glyph-infos glyph-positions)
           (hb-buffer-destroy buffer))))))
+
+(shape-text
+ "foo"
+ :font (foreign-slot-value *font-cozette* '(:struct font-data) 'harfbuzz-ptr))

@@ -413,11 +413,116 @@
 (defcfun "FT_Init_FreeType" :int32 (library :pointer))
 (defcfun "FT_Done_FreeType" :int32 (library :pointer))
 
+;; 12*4 + 4*4 + 8*2 + 10*4
+;; (+ (* 4 12) (* 4 4) (* 8 2) (* 10 4))
+
+(defcstruct (freetype-face)
+  (:num-faces :int64)
+  (:face-index :int64)
+  (:face-flags :int64)
+  (:style-flags :int64)
+  (:num-glyphs :int64)
+  (:family-name :string)
+  (:style-name :string)
+  (:num-fixed-sizes :int32)
+  (:available-sizes :pointer)
+  (:num-charmaps :int32)
+  (:charmaps :pointer)
+  (:generic :pointer)
+  (:generic-finalizer :pointer)
+
+  ;; these are only relevant for scalable outlines
+  (:bbox (:array :int64 4))
+  (:units-per-em :int16)
+  (:ascender :int16)
+  (:descender :int16)
+  (:height :int16)
+  (:max-advance-width :int16)
+  (:max-advance-height :int16)
+  (:underline-position :int16)
+  (:underline-thickness :int16)
+
+  (:glyph (:pointer (:struct freetype-glyph)))
+  (:size :pointer)
+  (:charmap :pointer))
+
+(defcenum (glyph-format :uint32)
+  :none
+  (:composite #x636f6d70)
+  (:bitmap #x62697473)
+  (:outline #x6f75746c))
+
+(char-code #\b)
+
+(defcstruct glyph-metrics
+  (:width :int64)
+  (:height :int64)
+  (:horizontal-bearing-x :int64)
+  (:horizontal-bearing-y :int64)
+  (:horizontal-advance :int64)
+  (:vertical-bearing-x :int64)
+  (:vertical-bearing-y :int64)
+  (:vertical-advance :int64))
+
+(defcstruct freetype-outline
+  (:n-contours :int16)
+  (:n-points :int16)
+  (:points :pointer)
+  (:tags :pointer)
+  (:contours :pointer)
+  (:flags :int32))
+
+(defcstruct freetype-glyph-slot
+  (:library :pointer)
+  (:face (:pointer (:struct freetype-face)))
+  (:next (:pointer (:struct freetype-glyph-slot)))
+  (:glyph-index :uint32)
+  (:generic :pointer)
+  (:generic-finalizer :pointer)
+  (:metrics (:struct glyph-metrics))
+  (:linear-horizontal-advance :int64)
+  (:linear-vertical-advance :int64)
+  (:advance-x :int64)
+  (:advance-y :int64)
+  (:format glyph-format)
+  (:bitmap (:struct freetype-bitmap))
+  (:bitmap-left :int32)
+  (:bitmap-top :int32)
+  (:outline (:struct freetype-outline))
+  (:num-subglyphs :uint32)
+  (:subglyphs :pointer)
+  (:control-data :pointer)
+  (:control-length :int64)
+  (:lsb-delta :int64)
+  (:rsb-delta :int64)
+  (:other :pointer)
+  (:internal :pointer))
+
+(defcstruct freetype-glyph
+  (:library :pointer)
+  (:class :pointer)
+  (:format glyph-format)
+  (:advance-x :int64)
+  (:advance-y :int64))
+
+(defcenum (pixel-mode :uint8)
+  :none :mono :gray :gray2 :gray4 :lcd :lcd-vv :bgra)
+
+(defcstruct freetype-bitmap
+  (:rows :uint32)
+  (:width :uint32)
+  (:pitch :int32)
+  (:buffer :pointer)
+  (:num-grays :uint16)
+  (:pixel-mode pixel-mode)
+  (:palette-mode :uint8)
+  (:palette :pointer))
+
 (defcfun "FT_New_Face" :int32
   (library :pointer)
   (path :string)
   (face-index :long)
-  (face-ptr :pointer))
+  (face-ptr (:pointer (:struct freetype-face))))
 
 (defcfun "FT_Set_Pixel_Sizes" :int32
   (face :pointer)
@@ -503,7 +608,7 @@
   (:x-offset :int32)
   (:y-offset :int32))
 
-(defcstruct (glyph-extents)
+(defcstruct glyph-extents
   (:x-bearing :int32)
   (:y-bearing :int32)
   (:width :int32)
@@ -544,7 +649,7 @@
     :bool
   (font :pointer)
   (glyph :uint32)
-  (extents (:pointer glyph-extents)))
+  (extents (:pointer (:struct glyph-extents))))
 
 (define-condition freetype-error (error)
   ((code :initarg :code :reader freetype-error-code)))
@@ -592,6 +697,9 @@
 (defvar *font-dm-mono*
   (load-font "./fonts/DMMono-Regular.ttf" 9))
 
+(defvar *font-concrete-roman*
+  (load-font "./fonts/computer-modern/cmunorm.otf" 10))
+
 (defun shape-text (text &key
                           font
                           (language "en")
@@ -602,7 +710,7 @@
     (hb-buffer-set-script buffer (hb-script-from-string script -1))
     (hb-buffer-set-language buffer (hb-language-from-string language -1))
     (hb-buffer-add-utf8 buffer text -1 0 -1)
-    (hb-shape font buffer (null-pointer) 0)
+    (hb-shape (font-harfbuzz-ptr font) buffer (null-pointer) 0)
     (with-foreign-object (glyph-count :uint32)
       (let* ((glyph-infos
                (foreign-array-to-lisp
@@ -617,9 +725,7 @@
           (hb-buffer-destroy buffer))))))
 
 (assert-equalp
- (shape-text
-  "xyz"
-  :font (font-harfbuzz-ptr *font-cozette*))
+ (shape-text "xyz" :font *font-cozette*)
  (list #((:cluster 0 :codepoint 121)
          (:cluster 1 :codepoint 122)
          (:cluster 2 :codepoint 123))
@@ -627,15 +733,25 @@
          (:y-offset 0 :x-offset 0 :y-advance 0 :x-advance 384)
          (:y-offset 0 :x-offset 0 :y-advance 0 :x-advance 384))))
 
-(defun bar ()
-  (let* ((*display-width* 32)
-         (*display-height* 24)
-         (*c-frame* (allocate-c-frame)))
-    (try (epap-render-text *font-cozette* "Hey!" *c-frame* *display-width* 0 0))
-    (let ((array (foreign-array-to-lisp
-                  *c-frame*
-                  (list :array :uint8 (display-bitmap-size))
-                  :element-type :unsigned-byte)))
-      (prin1 array)
-      (prog1 (byte-vector->bit-array array *display-width* *display-height*)
-        (foreign-array-free *c-frame*)))))
+(defun read-glyph-slot (font)
+  (mem-ref
+   (getf
+    (mem-ref (font-freetype-ptr font) '(:struct freetype-face))
+    :glyph)
+   '(:struct freetype-glyph-slot)))
+
+(defun load-glyph (font glyph-id)
+  (check-freetype-result
+   (ft-load-glyph (font-freetype-ptr font) glyph-id
+                  (make-load-flags '(:render :target-mono :force-autohint))))
+  (with-foreign-object (extents '(:struct glyph-extents))
+    (unless (hb-font-get-glyph-extents (font-harfbuzz-ptr font)
+                                       glyph-id extents)
+      (error "harfbuzz: failed to get glyph extents for glyph ~A" glyph-id))
+    (mem-aref extents '(:struct glyph-extents))))
+
+(assert-equalp
+ (load-glyph *font-cozette* 121)
+ '(:height -384 :width 320 :y-bearing 384 :x-bearing 64))
+
+(read-glyph-slot *font-concrete-roman*)

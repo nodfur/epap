@@ -415,6 +415,26 @@
   (width :uint32)
   (height :uint32))
 
+(defcfun "FT_Load_Glyph" :int32
+  (face :pointer)
+  (glyph-index :uint32)
+  (load-flags :int32))
+
+(defcenum ft-render-mode
+  :normal :light :mono :lcd :lcd-v :sdf)
+
+(defun ft-load-target (mode)
+  (ash (foreign-enum-value 'ft-render-mode mode) 16))
+
+(defun load-flag-number (flag)
+  (ecase flag
+    (:render (ash 1 2))
+    (:target-mono (ft-load-target :mono))
+    (:force-autohint (ash 1 5))))
+
+(defun make-load-flags (flags)
+  (apply #'logior (mapcar flags ) ))
+
 (defcfun "hb_ft_font_create_referenced" :pointer
   (freetype-font :pointer))
 
@@ -422,9 +442,14 @@
   (font :pointer))
 
 (defcfun "hb_buffer_create" :pointer)
+(defcfun "hb_buffer_destroy" :void (buffer :pointer))
 
 (defcenum hb-direction
-  :invalid :left-to-right :right-to-left :top-to-bottom :bottom-to-top)
+  (:invalid 0)
+  (:left-to-right 4)
+  :right-to-left
+  :top-to-bottom
+  :bottom-to-top)
 
 (defcfun "hb_buffer_set_direction" :void
   (buffer :pointer)
@@ -474,6 +499,9 @@
   (buffer :pointer)
   (glyph-count (:pointer :uint32)))
 
+(defcfun "hb_buffer_has_positions" :boolean
+  (buffer :pointer))
+
 (defcfun "hb_buffer_get_glyph_positions"
     (:pointer (:struct glyph-position))
   (buffer :pointer)
@@ -490,3 +518,27 @@
   (font :pointer)
   (glyph :uint32)
   (extents (:pointer glyph-extents)))
+
+(defun shape-text (text &key
+                          font
+                          (language "en")
+                          (direction :left-to-right)
+                          (script "Latn"))
+  (let ((buffer (hb-buffer-create)))
+    (hb-buffer-set-direction buffer direction)
+    (hb-buffer-set-script buffer (hb-script-from-string script -1))
+    (hb-buffer-set-language buffer (hb-language-from-string language -1))
+    (hb-buffer-add-utf8 buffer text -1 0 -1)
+    (hb-shape font buffer (null-pointer) 0)
+    (with-foreign-object (glyph-count :uint32)
+      (let* ((glyph-infos
+               (foreign-array-to-lisp
+                (hb-buffer-get-glyph-infos buffer glyph-count)
+                `(:array (:struct glyph-info) ,(mem-aref glyph-count :uint32))))
+             (glyph-positions
+               (foreign-array-to-lisp
+                (hb-buffer-get-glyph-positions buffer glyph-count)
+                `(:array (:struct glyph-position) ,(mem-aref glyph-count :uint32)))))
+        (prog1
+            (list (hb-buffer-has-positions buffer) glyph-infos glyph-positions)
+          (hb-buffer-destroy buffer))))))

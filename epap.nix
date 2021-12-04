@@ -13,6 +13,8 @@ stdenv.mkDerivation {
     lispPackages.alexandria
     lispPackages.trivial-features
     lispPackages.babel
+    lispPackages.zpng
+    lispPackages.cl-base64
   ];
   preBuild = ''
     export HOME=$TMPDIR

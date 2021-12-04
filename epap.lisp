@@ -10,9 +10,11 @@
 (require :asdf)
 (asdf:load-system :cffi)
 (asdf:load-system :babel)
+(asdf:load-system :zpng)
+(asdf:load-system :cl-base64)
 
 (defpackage :epapi
-  (:use :common-lisp :cffi :asdf :uiop))
+  (:use :common-lisp :cffi :asdf :uiop :cl-base64))
 
 (in-package :epapi)
 
@@ -793,6 +795,27 @@
   (loop for i below (array-dimension array 0)
         collect (loop for j below (array-dimension array 1)
                       collect (= 1 (aref array i j)))))
+
+(defun canvas-to-png (canvas)
+  (let* ((height (array-dimension canvas 0))
+         (width (array-dimension canvas 1))
+         (png (make-instance 'zpng:png
+                             :color-type :grayscale
+                             :width width
+                             :height height))
+         (image (zpng:data-array png)))
+    (dotimes (y height png)
+      (dotimes (x width)
+        (setf (aref image y x 0) (aref canvas y x))))))
+
+(defun elisp-fun-png (width height text &key (dry-run nil))
+  (let* ((canvas
+           (test-draw-line :text text
+                           :font *font-cozette*
+                           :width width :height height))
+         (png (canvas-to-png canvas))
+         )
+    png))
 
 (defun elisp-fun (width height text &key (dry-run nil))
   (let* ((canvas

@@ -672,11 +672,11 @@
 (defvar *font-cozette*
   (load-font "./fonts/cozette.bdf" 13))
 
-(defvar *font-dm-mono*
-  (load-font "./fonts/DMMono-Regular.ttf" 9))
+(defparameter *font-dm-mono*
+  (load-font "./fonts/DMMono-Regular.ttf" 16))
 
-(defvar *font-concrete-roman*
-  (load-font "./fonts/computer-modern/cmunorm.otf" 10))
+(defparameter *font-concrete-roman*
+  (load-font "./fonts/computer-modern/cmunorm.otf" 16))
 
 (defun shape-text (text &key
                           font
@@ -730,12 +730,6 @@
                                        glyph-id extents)
       (error "harfbuzz: failed to get glyph extents for glyph ~A" glyph-id))
     (mem-ref extents '(:struct glyph-extents))))
-
-(assert-equalp
- (load-glyph *font-cozette* 37)
- '(:height -384 :width 320 :y-bearing 384 :x-bearing 64))
-
-(read-glyph-slot *font-cozette*)
 
 (defun draw-bitmap (canvas bitmap origin-x origin-y)
   (destructuring-bind (&key buffer pitch width rows &allow-other-keys) bitmap
@@ -794,6 +788,28 @@
      (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
      (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
      (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)))
+
+(defun 2d-array-to-list (array)
+  (loop for i below (array-dimension array 0)
+        collect (loop for j below (array-dimension array 1)
+                      collect (= 1 (aref array i j)))))
+
+(defun elisp-fun (width height text)
+  (let* ((canvas
+           (test-draw-line :text text
+                           :font *font-cozette*
+                           :width width :height height))
+         (bit-list (2d-array-to-list canvas)))
+    (swank:eval-in-emacs
+     `(slime-media-insert-image
+       (create-image
+        (vconcat (mapcar (lambda (x)
+                           (apply #'bool-vector x))
+                         (quote ,bit-list)))
+        'xbm t :width ,width :height ,height)
+       " "))))
+
+;; (setq slime-enable-evaluate-in-emacs t)
 
 
 ;; Now that we're in Lisp, we should be able to start experimenting

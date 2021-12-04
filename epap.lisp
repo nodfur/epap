@@ -794,20 +794,20 @@
         collect (loop for j below (array-dimension array 1)
                       collect (= 1 (aref array i j)))))
 
-(defun elisp-fun (width height text)
+(defun elisp-fun (width height text &key (dry-run nil))
   (let* ((canvas
            (test-draw-line :text text
                            :font *font-cozette*
                            :width width :height height))
-         (bit-list (2d-array-to-list canvas)))
-    (swank:eval-in-emacs
-     `(slime-media-insert-image
-       (create-image
-        (vconcat (mapcar (lambda (x)
-                           (apply #'bool-vector x))
-                         (quote ,bit-list)))
-        'xbm t :width ,width :height ,height)
-       " "))))
+         (bit-list (2d-array-to-list canvas))
+         (elisp `(slime-media-insert-image
+                  (create-image
+                   (vconcat (mapcar (lambda (x)
+                                      (apply #'bool-vector x))
+                                    (quote ,bit-list)))
+                   'xbm t :width ,width :height ,height)
+                  " ")))
+    (if dry-run elisp (swank:eval-in-emacs elisp))))
 
 ;; (setq slime-enable-evaluate-in-emacs t)
 

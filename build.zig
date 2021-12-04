@@ -31,6 +31,7 @@ pub fn build(b: *std.build.Builder) void {
     epapi.setBuildMode(mode);
     epapi.linkSystemLibrary("c");
     epapi.linkSystemLibrary("c++");
+    epapi.linkSystemLibrary("cap");
     epapi.linkLibrary(text);
 
     epapi.addIncludeDir(".");
@@ -40,7 +41,7 @@ pub fn build(b: *std.build.Builder) void {
 
     epapi.addCSourceFile(
         "vendor/bcm2835-1.70/src/bcm2835.c",
-        &.{"-fno-sanitize=undefined"},
+        &.{ "-fno-sanitize=undefined", "-DBCM2835_HAVE_LIBCAP" },
     );
 
     text.install();

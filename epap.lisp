@@ -1,3 +1,12 @@
+(defun swank ()
+  (swank:create-server
+   :interface "urbion.brockman.se.beta.tailscale.net"
+   :port 4005
+   :style :spawn
+   :dont-close t))
+
+;; (swank)
+
 (require :asdf)
 (asdf:load-system :cffi)
 (asdf:load-system :babel)
@@ -409,12 +418,71 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defcfun "FT_Error_String" :string (error-code :int32))
-
 (defcfun "FT_Init_FreeType" :int32 (library :pointer))
 (defcfun "FT_Done_FreeType" :int32 (library :pointer))
 
-;; 12*4 + 4*4 + 8*2 + 10*4
-;; (+ (* 4 12) (* 4 4) (* 8 2) (* 10 4))
+(defcstruct glyph-metrics
+  (:width :int64)
+  (:height :int64)
+  (:horizontal-bearing-x :int64)
+  (:horizontal-bearing-y :int64)
+  (:horizontal-advance :int64)
+  (:vertical-bearing-x :int64)
+  (:vertical-bearing-y :int64)
+  (:vertical-advance :int64))
+
+(defcenum (glyph-format :uint32)
+  :none
+  (:composite #x636f6d70)
+  (:bitmap #x62697473)
+  (:outline #x6f75746c))
+
+(defcenum (pixel-mode :uint8)
+  :none :mono :gray :gray2 :gray4 :lcd :lcd-vv :bgra)
+
+(defcstruct freetype-bitmap
+  (:rows :uint32)
+  (:width :uint32)
+  (:pitch :int32)
+  (:buffer :pointer)
+  (:num-grays :uint16)
+  (:pixel-mode pixel-mode)
+  (:palette-mode :uint8)
+  (:palette :pointer))
+
+(defcstruct freetype-outline
+  (:n-contours :int16)
+  (:n-points :int16)
+  (:points :pointer)
+  (:tags :pointer)
+  (:contours :pointer)
+  (:flags :int32))
+
+(defcstruct freetype-glyph-slot
+  (:library :pointer)
+  (:face :pointer )
+  (:next (:pointer (:struct freetype-glyph-slot)))
+  (:glyph-index :uint32)
+  (:generic :pointer)
+  (:generic-finalizer :pointer)
+  (:metrics (:struct glyph-metrics))
+  (:linear-horizontal-advance :int64)
+  (:linear-vertical-advance :int64)
+  (:advance-x :int64)
+  (:advance-y :int64)
+  (:format glyph-format)
+  (:bitmap (:struct freetype-bitmap))
+  (:bitmap-left :int32)
+  (:bitmap-top :int32)
+  (:outline (:struct freetype-outline))
+  (:num-subglyphs :uint32)
+  (:subglyphs :pointer)
+  (:control-data :pointer)
+  (:control-length :int64)
+  (:lsb-delta :int64)
+  (:rsb-delta :int64)
+  (:other :pointer)
+  (:internal :pointer))
 
 (defcstruct (freetype-face)
   (:num-faces :int64)
@@ -442,81 +510,9 @@
   (:underline-position :int16)
   (:underline-thickness :int16)
 
-  (:glyph (:pointer (:struct freetype-glyph)))
+  (:glyph (:pointer (:struct freetype-glyph-slot)))
   (:size :pointer)
   (:charmap :pointer))
-
-(defcenum (glyph-format :uint32)
-  :none
-  (:composite #x636f6d70)
-  (:bitmap #x62697473)
-  (:outline #x6f75746c))
-
-(char-code #\b)
-
-(defcstruct glyph-metrics
-  (:width :int64)
-  (:height :int64)
-  (:horizontal-bearing-x :int64)
-  (:horizontal-bearing-y :int64)
-  (:horizontal-advance :int64)
-  (:vertical-bearing-x :int64)
-  (:vertical-bearing-y :int64)
-  (:vertical-advance :int64))
-
-(defcstruct freetype-outline
-  (:n-contours :int16)
-  (:n-points :int16)
-  (:points :pointer)
-  (:tags :pointer)
-  (:contours :pointer)
-  (:flags :int32))
-
-(defcstruct freetype-glyph-slot
-  (:library :pointer)
-  (:face (:pointer (:struct freetype-face)))
-  (:next (:pointer (:struct freetype-glyph-slot)))
-  (:glyph-index :uint32)
-  (:generic :pointer)
-  (:generic-finalizer :pointer)
-  (:metrics (:struct glyph-metrics))
-  (:linear-horizontal-advance :int64)
-  (:linear-vertical-advance :int64)
-  (:advance-x :int64)
-  (:advance-y :int64)
-  (:format glyph-format)
-  (:bitmap (:struct freetype-bitmap))
-  (:bitmap-left :int32)
-  (:bitmap-top :int32)
-  (:outline (:struct freetype-outline))
-  (:num-subglyphs :uint32)
-  (:subglyphs :pointer)
-  (:control-data :pointer)
-  (:control-length :int64)
-  (:lsb-delta :int64)
-  (:rsb-delta :int64)
-  (:other :pointer)
-  (:internal :pointer))
-
-(defcstruct freetype-glyph
-  (:library :pointer)
-  (:class :pointer)
-  (:format glyph-format)
-  (:advance-x :int64)
-  (:advance-y :int64))
-
-(defcenum (pixel-mode :uint8)
-  :none :mono :gray :gray2 :gray4 :lcd :lcd-vv :bgra)
-
-(defcstruct freetype-bitmap
-  (:rows :uint32)
-  (:width :uint32)
-  (:pitch :int32)
-  (:buffer :pointer)
-  (:num-grays :uint16)
-  (:pixel-mode pixel-mode)
-  (:palette-mode :uint8)
-  (:palette :pointer))
 
 (defcfun "FT_New_Face" :int32
   (library :pointer)
@@ -614,24 +610,6 @@
   (:width :int32)
   (:height :int32))
 
-;; (defstruct glyph-info
-;;   codepoint cluster)
-
-;; (defstruct glyph-position
-;;   x-offset y-offset x-advance y-advance)
-
-;; (defstruct glyph-extents
-;;   x-bearing y-bearing width height)
-
-;; (defmethod translate-from-foreign (pointer (type %glyph-info))
-;;   (apply #'make-glyph-info (call-next-method)))
-
-;; (defmethod translate-from-foreign (pointer (type %glyph-position))
-;;   (apply #'make-glyph-position (call-next-method)))
-
-;; (defmethod translate-from-foreign (pointer (type %glyph-extents))
-;;   (apply #'make-glyph-extents (call-next-method)))
-
 (defcfun "hb_buffer_get_glyph_infos"
     (:pointer (:struct glyph-info))
   (buffer :pointer)
@@ -715,11 +693,11 @@
       (let* ((glyph-infos
                (foreign-array-to-lisp
                 (hb-buffer-get-glyph-infos buffer glyph-count)
-                `(:array (:struct glyph-info) ,(mem-aref glyph-count :uint32))))
+                `(:array (:struct glyph-info) ,(mem-ref glyph-count :uint32))))
              (glyph-positions
                (foreign-array-to-lisp
                 (hb-buffer-get-glyph-positions buffer glyph-count)
-                `(:array (:struct glyph-position) ,(mem-aref glyph-count :uint32)))))
+                `(:array (:struct glyph-position) ,(mem-ref glyph-count :uint32)))))
         (prog1
             (list glyph-infos glyph-positions)
           (hb-buffer-destroy buffer))))))
@@ -740,6 +718,9 @@
     :glyph)
    '(:struct freetype-glyph-slot)))
 
+(defun read-glyph-bitmap (font)
+  (getf (read-glyph-slot font) :bitmap))
+
 (defun load-glyph (font glyph-id)
   (check-freetype-result
    (ft-load-glyph (font-freetype-ptr font) glyph-id
@@ -748,10 +729,97 @@
     (unless (hb-font-get-glyph-extents (font-harfbuzz-ptr font)
                                        glyph-id extents)
       (error "harfbuzz: failed to get glyph extents for glyph ~A" glyph-id))
-    (mem-aref extents '(:struct glyph-extents))))
+    (mem-ref extents '(:struct glyph-extents))))
 
 (assert-equalp
- (load-glyph *font-cozette* 121)
+ (load-glyph *font-cozette* 37)
  '(:height -384 :width 320 :y-bearing 384 :x-bearing 64))
 
-(read-glyph-slot *font-concrete-roman*)
+(read-glyph-slot *font-cozette*)
+
+(defun draw-bitmap (canvas bitmap origin-x origin-y)
+  (destructuring-bind (&key buffer pitch width rows &allow-other-keys) bitmap
+    (dotimes (i rows)
+      (dotimes (j width)
+        (let* ((source-byte-index (+ (* i pitch) (truncate j 8)))
+               (source-bit-index (- 7 (mod j 8)))
+               (source-byte (mem-aref buffer :uint8 source-byte-index))
+               (source-bit (if (logbitp source-bit-index source-byte) 1 0)))
+          (setf (bit canvas (+ origin-y i) (+ origin-x j)) source-bit))))))
+
+(defun draw-text-line (&key canvas origin-x origin-y text font)
+  (destructuring-bind (glyph-infos glyph-positions)
+      (shape-text text :font font)
+    (loop with x = origin-x and y = origin-y
+          for info across glyph-infos
+          and position across glyph-positions
+          do (destructuring-bind (&key x-bearing y-bearing &allow-other-keys)
+                 (load-glyph font (getf info :codepoint))
+               (destructuring-bind
+                   (&key x-advance y-advance x-offset y-offset)
+                   position
+                 (draw-bitmap canvas (read-glyph-bitmap font)
+                              (+ (truncate x-offset 64)
+                                 (truncate x-bearing 64)
+                                 x)
+                              (+ (truncate y-offset 64)
+                                 (- (font-height font) (truncate y-bearing 64))
+                                 y))
+                 (incf x (truncate x-advance 64))
+                 (incf y (truncate y-advance 64)))))))
+
+(defun test-draw-line (&key width height font text)
+  (let ((canvas (make-array (list height width) :element-type 'bit))
+        (bitmap (getf (read-glyph-slot *font-cozette*) :bitmap)))
+    (prog1 canvas
+      (draw-text-line
+       :canvas canvas :origin-x 0 :origin-y 0
+       :font font :text text))))
+
+(assert-equalp
+ (test-draw-line :text "Foo!" :font *font-cozette* :width 24 :height 16)
+ #2A((0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+     (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+     (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+     (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+     (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+     (0 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0)
+     (0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0)
+     (0 1 0 0 0 0 0 0 1 1 1 0 0 0 1 1 1 0 0 0 0 1 0 0)
+     (0 1 1 1 1 0 0 1 0 0 0 1 0 1 0 0 0 1 0 0 0 1 0 0)
+     (0 1 0 0 0 0 0 1 0 0 0 1 0 1 0 0 0 1 0 0 0 1 0 0)
+     (0 1 0 0 0 0 0 1 0 0 0 1 0 1 0 0 0 1 0 0 0 1 0 0)
+     (0 1 0 0 0 0 0 1 0 0 0 1 0 1 0 0 0 1 0 0 0 0 0 0)
+     (0 1 0 0 0 0 0 0 1 1 1 0 0 0 1 1 1 0 0 0 0 1 0 0)
+     (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+     (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+     (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)))
+
+
+;; Now that we're in Lisp, we should be able to start experimenting
+;; with updating the display partially, to see how fast we can insert
+;; letters, what happens when we overwrite a region, etc.
+
+
+(defun build-zig-function (name code)
+  ;; For some weird reason, Zig when called from the Lisp process like this
+  ;; seems to generate object files without the exported functions.
+  (let* ((source-path
+           (format nil "zig-lisp/~A.zig" name))
+         (build-command
+           (format nil "zig build-lib -dynamic ~A" source-path))
+         (library-filename
+           (format nil "lib~A.so" name))
+         (library-path
+           (format nil "zig-lisp/~A" library-filename)))
+    (with-open-file (source-file source-path
+                                 :direction :output
+                                 :if-exists :supersede
+                                 :if-does-not-exist :create)
+      (write-sequence code source-file)
+      (uiop:run-program build-command
+                        :output :interactive
+                        :error-output :interactive)
+      (uiop:run-program (format nil "mv ~A zig-lisp/" library-filename))
+      (cffi::register-foreign-library name `((:unix ,library-path)))
+      (load-foreign-library name))))

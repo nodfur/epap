@@ -81,6 +81,17 @@ pub fn demo() !void {
     try done();
 }
 
+// extern fn epap_render_glyph_to_bitmap(
+//     ft_face: c.FT_Face,
+
+//     bitmap: [*]u8,
+//     width: u32,
+//     x: i32,
+//     y: i32,
+// ) u32 {
+
+// }
+
 pub fn renderText(
     black: u1,
     font: Font,

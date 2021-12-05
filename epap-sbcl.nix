@@ -4,12 +4,13 @@ stdenv.mkDerivation {
   name = "epap-sbcl";
   version = "0.5";
   src = ./.;
-  buildInputs = [
-    sbcl
-    lispPackages.cffi
-    lispPackages.alexandria
-    lispPackages.trivial-features
-    lispPackages.babel
+  buildInputs = [sbcl] ++ with lispPackages; [
+    cffi
+    alexandria
+    trivial-features
+    babel
+    zpng
+    cl-base64
   ];
   buildPhase = "true";
   installPhase = ''

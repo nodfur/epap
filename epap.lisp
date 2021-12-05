@@ -119,7 +119,7 @@
 (deftype register ()
   '(member
     :I80CPCR
-    :LISAR
+    :LISAR+0
     :LISAR+2
     :LUTAFSR
     :UP1SR+2
@@ -128,11 +128,11 @@
 (defun register-number (register)
   (ecase register
     (:I80CPCR #x4)
-    (:LISAR #x208)
-    (:LISAR+2 (+ 2 #x208))
-    (:LUTAFSR #x1224)
-    (:UP1SR+2 (+ 2 #x138))
-    (:BGVR #x1250)))
+    (:LISAR+0 (+ #x200 #x8))
+    (:LISAR+2 (+ #x200 #x8 2))
+    (:LUTAFSR (+ #x1000 #x224))
+    (:UP1SR+2 (+ #x1000 #x138 2))
+    (:BGVR (+ #x1000 #x250))))
 
 (defun pin-number (pin)
   (ecase pin
@@ -162,7 +162,27 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defparameter *dry-run* nil)
+(defvar *dry-run-log* ())
+
+(defmacro maybe-dry-run (message &body body)
+  `(if *dry-run*
+       (setf *dry-run-log* (cons ,message *dry-run-log*))
+       (progn ,@body)))
+
+(defmacro dry-run (&body body)
+  `(let ((*dry-run* t)
+         (*dry-run-log* ()))
+     (values (progn ,@body)
+             (nreverse *dry-run-log*))))
+
+(defun no-dry-run ()
+  (when *dry-run*
+    (cerror "ignore dry run" "no frobbing on dry run")))
+
 (defun initialize-bcm2835 ()
+  (no-dry-run)
+
   (unless (bcm2835-init)
     (error "bcm2835_init failed"))
   (unless (bcm2835-spi-begin)
@@ -173,9 +193,11 @@
   (bcm2835-spi-setClockDivider :divider-32))
 
 (defun gpio-write (pin bit)
+  (no-dry-run)
   (bcm2835-gpio-write (pin-number pin) bit))
 
 (defun close-bcm2835 ()
+  (no-dry-run)
   (gpio-write :cs 0)
   (gpio-write :rst 0)
   (bcm2835-spi-end)
@@ -183,15 +205,18 @@
     (error "bcm2835_close failed")))
 
 (defun gpio-mode (pin mode)
+  (no-dry-run)
   (bcm2835-gpio-fsel (pin-number pin) mode))
 
 (defun gpio-read (pin)
+  (no-dry-run)
   (bcm2835-gpio-lev (pin-number pin)))
 
 (defun gpio-wait ()
-  (loop repeat 10000000
-        when (= 1 (gpio-read :busy))
-          return t))
+  (unless (loop repeat 100000000
+                when (= 1 (gpio-read :busy))
+                  return t)
+    (error "gpio wait error")))
 
 (defun delay-milliseconds (ms)
   (bcm2835-delay ms))
@@ -200,9 +225,11 @@
   (bcm2835-delaymicroseconds us))
 
 (defun spi-write-byte (x)
+  (no-dry-run)
   (bcm2835-spi-transfer x))
 
 (defun spi-write-word (x)
+  (no-dry-run)
   (spi-write-byte (ldb (byte 8 8) x))
   (spi-write-byte (ldb (byte 8 0) x)))
 
@@ -225,25 +252,13 @@
   (gpio-wait))
 
 (defun write-command (cmd)
-  (start-packet :command)
-  (spi-write-word (command-number cmd))
-  (cs-high))
-
-(defun write-word-packet (word)
-  (start-packet :write)
-  (spi-write-word word)
-  (cs-high))
-
-(defun write-word-packets (word-list)
-  (loop for word in word-list
-        do (write-word-packet word)))
-
-(defun write-register (register value)
-  (write-command :write-register)
-  (write-word-packet (register-number register))
-  (write-word-packet value))
+  (maybe-dry-run `(write-command ,cmd)
+    (start-packet :command)
+    (spi-write-word (command-number cmd))
+    (cs-high)))
 
 (defun spi-read-byte ()
+  (no-dry-run)
   (bcm2835-spi-transfer 0))
 
 (defun spi-read-word ()
@@ -274,6 +289,28 @@
   (start-reading)
   (prog1 (spi-read-word)
     (cs-high)))
+
+(defun write-word-packet (word)
+  (maybe-dry-run `(write-word-packet ,word)
+    (start-packet :write)
+    (spi-write-word word)
+    (cs-high)))
+
+(defun write-word-packets (word-list)
+  (maybe-dry-run `(write-word-packets ,word-list)
+    (loop for word in word-list
+          do (write-word-packet word))))
+
+(defun write-register (register value)
+  (maybe-dry-run `(write-register ,register ,value)
+    (write-command :write-register)
+    (write-word-packet (register-number register))
+    (write-word-packet value)))
+
+(defun read-register (register)
+  (write-command :read-register)
+  (write-word-packet (register-number register))
+  (request-word))
 
 (defun bpp-pixel-format (bits)
   (ecase bits
@@ -314,6 +351,12 @@
   (write-word-packet 1)
   (write-word-packet (round (* 1000 (abs vcom)))))
 
+(defvar *vcom* -1.73)
+(defvar *display-width*)
+(defvar *display-height*)
+(defvar *framebuffer-address*)
+(defvar *c-frame*)
+
 (defun initialize-display ()
   (reset-display)
   (write-command :run)
@@ -332,21 +375,29 @@
    spi-write-word spi-write-byte
    spi-read-word spi-read-byte spi-read-address spi-read-bytes))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun call-with-display (f)
+  (start-display)
+  (unwind-protect (call f)
+    (stop-display)))
 
-(defvar *vcom* -1.73)
-(defvar *display-width*)
-(defvar *display-height*)
-(defvar *base-address*)
-(defvar *c-frame*)
-
-(defun boot ()
+(defun start-display ()
   (initialize-bcm2835)
   (initialize-gpio)
-  (unwind-protect
-       (initialize-display)
-    (enter-sleep-mode)
-    (close-bcm2835)))
+  (let ((info (initialize-display)))
+    (prog1 info
+      (setf *display-width* (system-info-width info)
+            *display-height* (system-info-height info)
+            *framebuffer-address* (system-info-address info)))))
+
+(defun stop-display ()
+  (enter-sleep-mode)
+  (close-bcm2835))
+
+(defmacro with-display-running (&body body)
+  `(progn
+     (start-display)
+     (unwind-protect (progn ,@body)
+       (stop-display))))
 
 (defvar *text-initialized* nil)
 
@@ -416,6 +467,80 @@
 ;;   (try (epap-render-text *font-cozette* "foo" *c-frame* *display-width* 0 0)))
 
 (unit-test)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Let's do some drawing to the screen.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun wait-for-display ()
+  (unless
+      (dotimes (i 10000)
+        (when (zerop (read-register :lutafsr))
+          (return t)))
+    (error "timeout waiting for display")))
+
+(defparameter *image-endianness* 0)     ;; little
+(defparameter *image-rotation* 0)       ;; normal
+(defparameter *image-bpp* 8)            ;; bitmap
+
+(defun set-framebuffer-address (address)
+  (write-register :lisar+2 (ldb (byte 16 16) address))
+  (write-register :lisar+0 (ldb (byte 16 0) address)))
+
+(defun read-word-from-bitmap (bitmap row offset)
+  (loop for i from 0 below 16
+        sum (ash (bit bitmap row (+ offset i)) (- 15 i))))
+
+(defun write-area-to-framebuffer (&key address rectangle bitmap)
+  "The rectangle should be word-aligned."
+  (wait-for-display)
+  (set-framebuffer-address address)
+  (destructuring-bind (&key x y w h) rectangle
+    (let* ((format (logior (ash *image-endianness* 8)
+                           (ash *image-bpp* 4)
+                           (ash *image-rotation* 0)))
+           (args (list format x y (/ w 8) h)))
+      (write-command :load-img-area-start)
+      (write-word-packets args))
+    (loop
+      for i from y below (+ y h)
+      do (loop
+           for j from x by 16 below (+ x w)
+           do
+              (format t "writing pixel word ~A, ~A~%" i j)
+              (write-word-packet (read-word-from-bitmap bitmap i j)))))
+  (write-command :load-img-end))
+
+(defun write-register-bit (register &key index bit)
+  (let ((value (read-register register)))
+    (write-register register (dpb bit (byte 1 index) value))))
+
+(defparameter *a2-mode* 6)
+(defparameter *initialize-mode* 0)
+
+(defun display-area (&key address rectangle mode)
+  (destructuring-bind (&key x y w h) rectangle
+    (ecase mode
+      (:fast-monochrome
+       (progn
+         (write-register-bit :up1sr+2 :index 2 :bit 1)
+         (write-register :bgvr #xf0)
+         (write-command :display-area-buf)
+         (write-word-packets
+          (list x y w h 6
+                (ldb (byte 16 0) address)
+                (ldb (byte 16 16) address)))
+         (wait-for-display)
+         (write-register-bit :up1sr+2 :index 2 :bit 0)))
+      (:initialize
+       (progn
+         (write-command :display-area)
+         (write-word-packets
+          (list x y w h *initialize-mode*)))))))
+
+(defmacro for-real (&body body)
+  `(let ((*dry-run* nil))
+     ,@body))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -772,24 +897,48 @@
        :canvas canvas :origin-x 0 :origin-y 0
        :font font :text text))))
 
-(assert-equalp
- (test-draw-line :text "Foo!" :font *font-cozette* :width 24 :height 16)
- #2A((0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
-     (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
-     (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
-     (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
-     (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
-     (0 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0)
-     (0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0)
-     (0 1 0 0 0 0 0 0 1 1 1 0 0 0 1 1 1 0 0 0 0 1 0 0)
-     (0 1 1 1 1 0 0 1 0 0 0 1 0 1 0 0 0 1 0 0 0 1 0 0)
-     (0 1 0 0 0 0 0 1 0 0 0 1 0 1 0 0 0 1 0 0 0 1 0 0)
-     (0 1 0 0 0 0 0 1 0 0 0 1 0 1 0 0 0 1 0 0 0 1 0 0)
-     (0 1 0 0 0 0 0 1 0 0 0 1 0 1 0 0 0 1 0 0 0 0 0 0)
-     (0 1 0 0 0 0 0 0 1 1 1 0 0 0 1 1 1 0 0 0 0 1 0 0)
-     (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
-     (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
-     (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)))
+;; (assert-equalp
+;;  (test-draw-line :text "Foo!" :font *font-cozette* :width 24 :height 16)
+;;  #2A((0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+;;      (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+;;      (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+;;      (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+;;      (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+;;      (0 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0)
+;;      (0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0)
+;;      (0 1 0 0 0 0 0 0 1 1 1 0 0 0 1 1 1 0 0 0 0 1 0 0)
+;;      (0 1 1 1 1 0 0 1 0 0 0 1 0 1 0 0 0 1 0 0 0 1 0 0)
+;;      (0 1 0 0 0 0 0 1 0 0 0 1 0 1 0 0 0 1 0 0 0 1 0 0)
+;;      (0 1 0 0 0 0 0 1 0 0 0 1 0 1 0 0 0 1 0 0 0 1 0 0)
+;;      (0 1 0 0 0 0 0 1 0 0 0 1 0 1 0 0 0 1 0 0 0 0 0 0)
+;;      (0 1 0 0 0 0 0 0 1 1 1 0 0 0 1 1 1 0 0 0 0 1 0 0)
+;;      (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+;;      (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+;;      (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)))
+
+(defun test-write-area-to-framebuffer ()
+  (let ((bitmap
+          (test-draw-line
+           :text "foo bar baz!"
+           :font *font-cozette*
+           :width 128 :height 32)))
+    (write-area-to-framebuffer
+     :address *framebuffer-address*
+     :rectangle '(:x 0 :y 0 :w 128 :h 32)
+     :bitmap bitmap)))
+
+(defun clear-framebuffer ()
+  (write-area-to-framebuffer
+   :address *framebuffer-address*
+   :rectangle (list :x 0 :y 0 :w *display-width* :h *display-height*)
+   :bitmap (make-array (list *display-height* *display-width*)
+                       :element-type 'bit
+                       :initial-element 0)))
+
+(defun test-display-area ()
+  (display-area :address *framebuffer-address*
+                :rectangle '(:x 0 :y 0 :w 128 :h 32)
+                :mode :fast-monochrome))
 
 (defun 2d-array-to-list (array)
   (loop for i below (array-dimension array 0)
@@ -813,8 +962,7 @@
            (test-draw-line :text text
                            :font *font-cozette*
                            :width width :height height))
-         (png (canvas-to-png canvas))
-         )
+         (png (canvas-to-png canvas)))
     png))
 
 (defun elisp-fun (width height text &key (dry-run nil))

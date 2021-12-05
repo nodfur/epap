@@ -63,14 +63,9 @@
 
 (use-foreign-library epapi)
 
-;; (defcfun "epap_render_text" :uint32
-;;   (font (:pointer (:struct font-data)))
-;;   (string :string)
-;;   (bitmap (:pointer :uint8))
-;;   (screen-width :uint32)
-;;   (x :uint32)
-;;   (y :uint32))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Broadcom BCM2385 integration stuff for Raspberry Pi GPIO/SPI           ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defcenum (spi-bit-order :uint8)

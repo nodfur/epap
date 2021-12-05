@@ -18,14 +18,29 @@
 
 (in-package :epapi)
 
+(defvar *current-font*)
+
+(defparameter *font-table*
+  '(:cozette "./fonts/cozette.bdf"
+    :dm-mono "./fonts/DMMono-Regular.ttf"
+    :concrete-roman "./fonts/computer-modern/cmunorm.otf"))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defvar *current-test*)
+
+(defmacro test (name &body body)
+  `(let ((*current-test* ,name))
+     ,@body))
 
 (define-condition failed-equality-assertion (error)
   ((actual :initarg :actual :reader assertion-actual)
-   (expected :initarg :expected :reader assertion-expected))
+   (expected :initarg :expected :reader assertion-expected)
+   (test :initform *current-test* :reader assertion-test))
 
   (:report (lambda (condition stream)
-             (format stream "Expected: ~A~%  Actual: ~A"
+             (format stream "Test: ~A~%Expected: ~A~%  Actual: ~A"
+                     (assertion-test condition)
                      (assertion-expected condition)
                      (assertion-actual condition)))))
 
@@ -37,7 +52,7 @@
     `(let ((,a ,actual)
            (,e ,expected))
        (if (equalp ,a ,e)
-           (signal 'test-ok)
+           (prog1 :ok (signal 'test-ok))
            (error 'failed-equality-assertion :expected ,e :actual ,a)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -178,7 +193,7 @@
 
 (defun no-dry-run ()
   (when *dry-run*
-    (cerror "ignore dry run" "no frobbing on dry run")))
+    (error "no frobbing on dry run")))
 
 (defun initialize-bcm2835 ()
   (no-dry-run)
@@ -213,10 +228,8 @@
   (bcm2835-gpio-lev (pin-number pin)))
 
 (defun gpio-wait ()
-  (unless (loop repeat 100000000
-                when (= 1 (gpio-read :busy))
-                  return t)
-    (error "gpio wait error")))
+  (sb-ext:with-timeout 5
+    (loop until (= 1 (gpio-read :busy)))))
 
 (defun delay-milliseconds (ms)
   (bcm2835-delay ms))
@@ -434,62 +447,53 @@
                   (setf (bit bit-array y x)
                         (if (logbitp (mod pixel-index 8) byte) 1 0))))))))
 
-(defun unit-test ()
+(test 'byte-vector->bit-array
   (assert-equalp
    (byte-vector->bit-array #(1) 1 8)
    (make-array '(8 1)
                :element-type 'bit
                :initial-contents '((1) (0) (0) (0) (0) (0) (0) (0)))))
 
-;; (defun foo ()
-;;   (let* ((*display-width* 32)
-;;          (*display-height* 24)
-;;          (*c-frame* (allocate-c-frame)))
-;;     (try (epap-render-text *font-cozette* "Hey!" *c-frame* *display-width* 0 0))
-;;     (let ((array (foreign-array-to-lisp
-;;                   *c-frame*
-;;                   (list :array :uint8 (display-bitmap-size))
-;;                   :element-type :unsigned-byte)))
-;;       (prin1 array)
-;;       (prog1 (byte-vector->bit-array array *display-width* *display-height*)
-;;         (foreign-array-free *c-frame*)))))
-
-;; (defun start-text ()
-;;   (try (epap-start-text))
-;;   (try (epap-load-font "./fonts/cozette.bdf" 13 *font-cozette*))
-;;   (try (epap-load-font "./fonts/DMMono-Regular.ttf" 9 *font-dm-mono*)))
-
-;; (unless *text-initialized*
-;;   (start-text)
-;;   (setf *text-initialized* t))
-
-;; (defun test-text (font-path font-height width)
-;;   (try (epap-render-text *font-cozette* "foo" *c-frame* *display-width* 0 0)))
-
-(unit-test)
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Let's do some drawing to the screen.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun wait-for-display ()
-  (unless
-      (dotimes (i 10000)
-        (when (zerop (read-register :lutafsr))
-          (return t)))
-    (error "timeout waiting for display")))
+  (maybe-dry-run '(wait-for-display)
+    (sb-ext:with-timeout 5
+      (loop until (= 0 (read-register :lutafsr))))))
 
 (defparameter *image-endianness* 0)     ;; little
 (defparameter *image-rotation* 0)       ;; normal
-(defparameter *image-bpp* 8)            ;; bitmap
+(defparameter *image-bpp* 3)            ;; bitmap
 
 (defun set-framebuffer-address (address)
   (write-register :lisar+2 (ldb (byte 16 16) address))
   (write-register :lisar+0 (ldb (byte 16 0) address)))
 
 (defun read-word-from-bitmap (bitmap row offset)
+  (unless (zerop (mod offset 16))
+    (error "bitmap offset ~A not word aligned" offset))
   (loop for i from 0 below 16
         sum (ash (bit bitmap row (+ offset i)) (- 15 i))))
+
+(test 'read-word-from-bitmap
+  (let ((canvas (make-array '(32 32) :element-type 'bit)))
+    (setf (bit canvas 0 0) 1
+          (bit canvas 0 1) 1
+          (bit canvas 1 30) 1)
+    (assert-equalp
+     (read-word-from-bitmap canvas 0 0)
+     #b1100000000000000)
+    (assert-equalp
+     (read-word-from-bitmap canvas 0 16)
+     0)
+    (assert-equalp
+     (read-word-from-bitmap canvas 1 16)
+     #b0000000000000010)))
+
+(defmacro note (x)
+  `(maybe-dry-run ,x nil))
 
 (defun write-area-to-framebuffer (&key address rectangle bitmap)
   "The rectangle should be word-aligned."
@@ -507,7 +511,7 @@
       do (loop
            for j from x by 16 below (+ x w)
            do
-              (format t "writing pixel word ~A, ~A~%" i j)
+              (note `(pixels ,i ,j))
               (write-word-packet (read-word-from-bitmap bitmap i j)))))
   (write-command :load-img-end))
 
@@ -774,15 +778,6 @@
   freetype-ptr
   harfbuzz-ptr)
 
-(defun load-font (path height)
-  (let* ((freetype-ptr (load-freetype-font path height))
-         (harfbuzz-ptr (hb-ft-font-create-referenced freetype-ptr)))
-    (hb-ft-font-set-funcs harfbuzz-ptr)
-    (make-font
-     :height height
-     :freetype-ptr freetype-ptr
-     :harfbuzz-ptr harfbuzz-ptr)))
-
 (defvar *freetype* (initialize-freetype))
 
 ;; (setf *freetype* (initialize-freetype))
@@ -796,17 +791,25 @@
         (check-freetype-result
          (ft-set-pixel-sizes face 0 height))))))
 
-(defvar *font-cozette*
-  (load-font "./fonts/cozette.bdf" 13))
+(defun load-font (path height)
+  (let* ((freetype-ptr (load-freetype-font path height))
+         (harfbuzz-ptr (hb-ft-font-create-referenced freetype-ptr)))
+    (hb-ft-font-set-funcs harfbuzz-ptr)
+    (make-font
+     :height height
+     :freetype-ptr freetype-ptr
+     :harfbuzz-ptr harfbuzz-ptr)))
 
-(defparameter *font-dm-mono*
-  (load-font "./fonts/DMMono-Regular.ttf" 16))
+(defun find-font (name height)
+  (let ((path (getf *font-table* name)))
+    (if path (load-font path height)
+        (error "unknown font name ~A" name))))
 
-(defparameter *font-concrete-roman*
-  (load-font "./fonts/computer-modern/cmunorm.otf" 16))
+(defmacro with-font (name height &body body)
+  `(let ((*current-font* (find-font ,name ,height)))
+     ,@body))
 
 (defun shape-text (text &key
-                          font
                           (language "en")
                           (direction :left-to-right)
                           (script "Latn"))
@@ -815,7 +818,7 @@
     (hb-buffer-set-script buffer (hb-script-from-string script -1))
     (hb-buffer-set-language buffer (hb-language-from-string language -1))
     (hb-buffer-add-utf8 buffer text -1 0 -1)
-    (hb-shape (font-harfbuzz-ptr font) buffer (null-pointer) 0)
+    (hb-shape (font-harfbuzz-ptr *current-font*) buffer (null-pointer) 0)
     (with-foreign-object (glyph-count :uint32)
       (let* ((glyph-infos
                (foreign-array-to-lisp
@@ -829,14 +832,16 @@
             (list glyph-infos glyph-positions)
           (hb-buffer-destroy buffer))))))
 
-(assert-equalp
- (shape-text "xyz" :font *font-cozette*)
- (list #((:cluster 0 :codepoint 121)
-         (:cluster 1 :codepoint 122)
-         (:cluster 2 :codepoint 123))
-       #((:y-offset 0 :x-offset 0 :y-advance 0 :x-advance 384)
-         (:y-offset 0 :x-offset 0 :y-advance 0 :x-advance 384)
-         (:y-offset 0 :x-offset 0 :y-advance 0 :x-advance 384))))
+(test 'shape-text
+  (assert-equalp
+   (with-font :cozette 13
+     (shape-text "xyz"))
+   (list #((:cluster 0 :codepoint 121)
+           (:cluster 1 :codepoint 122)
+           (:cluster 2 :codepoint 123))
+         #((:y-offset 0 :x-offset 0 :y-advance 0 :x-advance 384)
+           (:y-offset 0 :x-offset 0 :y-advance 0 :x-advance 384)
+           (:y-offset 0 :x-offset 0 :y-advance 0 :x-advance 384)))))
 
 (defun read-glyph-slot (font)
   (mem-ref
@@ -868,64 +873,59 @@
                (source-bit (if (logbitp source-bit-index source-byte) 1 0)))
           (setf (bit canvas (+ origin-y i) (+ origin-x j)) source-bit))))))
 
-(defun draw-text-line (&key canvas origin-x origin-y text font)
+(defun draw-text-line (text &key canvas origin-x origin-y)
   (destructuring-bind (glyph-infos glyph-positions)
-      (shape-text text :font font)
+      (shape-text text)
     (loop with x = origin-x and y = origin-y
           for info across glyph-infos
           and position across glyph-positions
           do (destructuring-bind (&key x-bearing y-bearing &allow-other-keys)
-                 (load-glyph font (getf info :codepoint))
+                 (load-glyph *current-font* (getf info :codepoint))
                (destructuring-bind
                    (&key x-advance y-advance x-offset y-offset)
                    position
-                 (draw-bitmap canvas (read-glyph-bitmap font)
+                 (draw-bitmap canvas (read-glyph-bitmap *current-font*)
                               (+ (truncate x-offset 64)
                                  (truncate x-bearing 64)
                                  x)
                               (+ (truncate y-offset 64)
-                                 (- (font-height font) (truncate y-bearing 64))
+                                 (- (font-height *current-font*)
+                                    (truncate y-bearing 64))
                                  y))
                  (incf x (truncate x-advance 64))
                  (incf y (truncate y-advance 64)))))))
 
-(defun test-draw-line (&key width height font text)
-  (let ((canvas (make-array (list height width) :element-type 'bit))
-        (bitmap (getf (read-glyph-slot *font-cozette*) :bitmap)))
+(defun test-draw-line (text &key width height)
+  (let ((canvas (make-array (list height width) :element-type 'bit)))
     (prog1 canvas
-      (draw-text-line
-       :canvas canvas :origin-x 0 :origin-y 0
-       :font font :text text))))
+      (draw-text-line text :canvas canvas :origin-x 0 :origin-y 0))))
 
-;; (assert-equalp
-;;  (test-draw-line :text "Foo!" :font *font-cozette* :width 24 :height 16)
-;;  #2A((0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
-;;      (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
-;;      (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
-;;      (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
-;;      (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
-;;      (0 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0)
-;;      (0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0)
-;;      (0 1 0 0 0 0 0 0 1 1 1 0 0 0 1 1 1 0 0 0 0 1 0 0)
-;;      (0 1 1 1 1 0 0 1 0 0 0 1 0 1 0 0 0 1 0 0 0 1 0 0)
-;;      (0 1 0 0 0 0 0 1 0 0 0 1 0 1 0 0 0 1 0 0 0 1 0 0)
-;;      (0 1 0 0 0 0 0 1 0 0 0 1 0 1 0 0 0 1 0 0 0 1 0 0)
-;;      (0 1 0 0 0 0 0 1 0 0 0 1 0 1 0 0 0 1 0 0 0 0 0 0)
-;;      (0 1 0 0 0 0 0 0 1 1 1 0 0 0 1 1 1 0 0 0 0 1 0 0)
-;;      (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
-;;      (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
-;;      (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)))
+(test 'draw-cozette-line
+  (assert-equalp
+   (with-font :cozette 13
+     (test-draw-line "Foo!" :width 24 :height 16))
+   #2A((0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+       (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+       (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+       (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+       (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+       (0 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0)
+       (0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0)
+       (0 1 0 0 0 0 0 0 1 1 1 0 0 0 1 1 1 0 0 0 0 1 0 0)
+       (0 1 1 1 1 0 0 1 0 0 0 1 0 1 0 0 0 1 0 0 0 1 0 0)
+       (0 1 0 0 0 0 0 1 0 0 0 1 0 1 0 0 0 1 0 0 0 1 0 0)
+       (0 1 0 0 0 0 0 1 0 0 0 1 0 1 0 0 0 1 0 0 0 1 0 0)
+       (0 1 0 0 0 0 0 1 0 0 0 1 0 1 0 0 0 1 0 0 0 0 0 0)
+       (0 1 0 0 0 0 0 0 1 1 1 0 0 0 1 1 1 0 0 0 0 1 0 0)
+       (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+       (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+       (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0))))
 
-(defun test-write-area-to-framebuffer ()
-  (let ((bitmap
-          (test-draw-line
-           :text "foo bar baz!"
-           :font *font-cozette*
-           :width 128 :height 32)))
-    (write-area-to-framebuffer
-     :address *framebuffer-address*
-     :rectangle '(:x 0 :y 0 :w 128 :h 32)
-     :bitmap bitmap)))
+(defun test-write-area-to-framebuffer (width height text)
+  (write-area-to-framebuffer
+   :address *framebuffer-address*
+   :rectangle (list :x 0 :y 0 :w width :h height)
+   :bitmap (test-draw-line text :width width :height height)))
 
 (defun clear-framebuffer ()
   (write-area-to-framebuffer
@@ -958,35 +958,23 @@
         (setf (aref image y x 0) (aref canvas y x))))))
 
 (defun elisp-fun-png (width height text &key (dry-run nil))
-  (let* ((canvas
-           (test-draw-line :text text
-                           :font *font-cozette*
-                           :width width :height height))
-         (png (canvas-to-png canvas)))
-    png))
+  (canvas-to-png (test-draw-line text :width width :height height)))
 
-(defun elisp-fun (width height text &key (dry-run nil))
+(defun elisp-fun-xbm (width height text &key (dry-run nil))
+  ;; very slow
   (let* ((canvas
-           (test-draw-line :text text
-                           :font *font-cozette*
-                           :width width :height height))
-         (bit-list (2d-array-to-list canvas))
+           (test-draw-line text :width width :height height))
+         (bits (2d-array-to-list canvas))
          (elisp `(slime-media-insert-image
                   (create-image
                    (vconcat (mapcar (lambda (x)
                                       (apply #'bool-vector x))
-                                    (quote ,bit-list)))
+                                    (quote ,bits)))
                    'xbm t :width ,width :height ,height)
                   " ")))
     (if dry-run elisp (swank:eval-in-emacs elisp))))
 
 ;; (setq slime-enable-evaluate-in-emacs t)
-
-
-;; Now that we're in Lisp, we should be able to start experimenting
-;; with updating the display partially, to see how fast we can insert
-;; letters, what happens when we overwrite a region, etc.
-
 
 (defun build-zig-function (name code)
   ;; For some weird reason, Zig when called from the Lisp process like this

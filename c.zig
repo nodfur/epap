@@ -3,6 +3,8 @@ pub usingnamespace @cImport({
     @cInclude("unistd.h");
     @cInclude("stdlib.h");
 
+    @cInclude("sys/capability.h");
+
     // GPIO/SPI for Raspberry Pi
     @cInclude("bcm2835.h");
 

@@ -1,5 +1,5 @@
 (swank:create-server
- :interface "urbion.brockman.se.beta.tailscale.net"
+ :interface "0.0.0.0"
  :port 4005
  :style :spawn
  :dont-close t)

@@ -25,7 +25,7 @@ pub fn build(b: *std.build.Builder) void {
         &.{ "-DHAVE_FREETYPE", "-fno-sanitize=undefined" },
     );
 
-    const epapi = b.addSharedLibrary("epapi", null, .unversioned);
+    const epapi = b.addSharedLibrary("epapi", "epap.zig", .unversioned);
 
     epapi.setTarget(target);
     epapi.setBuildMode(mode);

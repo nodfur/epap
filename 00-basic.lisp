@@ -72,6 +72,13 @@
      (values (progn ,@body)
              (nreverse *dry-run-log*))))
 
+(defmacro note (x)
+  `(maybe-dry-run ,x nil))
+
 (defun no-dry-run ()
   (when *dry-run*
     (error "no frobbing on dry run")))
+
+(defmacro for-real (&body body)
+  `(let ((*dry-run* nil))
+     ,@body))

@@ -26,7 +26,7 @@
 ;; Module parameters and interesting variables
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defparameter *vcom* nil
+(defparameter *vcom* -1.73
   "This is a unit-specific voltage value.")
 
 (defvar *display-width*
@@ -40,6 +40,14 @@
   ;; Can we use multiple framebuffers?
   ;; Can they be composited together somehow?
   "The discovered address of the default framebuffer.")
+
+(defvar *local-framebuffer* nil
+  "Our Lisp bit array that we render into the framebuffer.")
+
+(defun clear-local-framebuffer ()
+  (dotimes (y *display-height* nil)
+    (dotimes (x *display-width* nil)
+      (setf (sbit *local-framebuffer* y x) 0))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -260,7 +268,15 @@
     (write-register :I80CPCR 1)
     (set-vcom
      (or *vcom* (restart-case (error "VCOM value required")
-                  (provide-vcom-value (vcom) vcom))))))
+                  (use-1.73 ()
+                    :report "Use the -1.73 value."
+                    -1.73)
+                  (provide-vcom-value (vcom)
+                    :report "Provide a value."
+                    :interactive (lambda ()
+                                   (format t "VCOM value: ")
+                                   (multiple-value-list (eval (read))))
+                    vcom))))))
 
 (defun enter-sleep-mode ()
   (write-command :sleep))
@@ -272,6 +288,9 @@
     (prog1 info
       (setf *display-width* (system-info-width info)
             *display-height* (system-info-height info)
+            *local-framebuffer* (make-array
+                                 (list *display-height* *display-width*)
+                                 :element-type 'bit)
             *framebuffer-address* (system-info-address info)))))
 
 (defun stop-display ()
@@ -283,3 +302,102 @@
      (start-display)
      (unwind-protect (progn ,@body)
        (stop-display))))
+
+(defun wait-for-display ()
+  (maybe-dry-run '(wait-for-display)
+    (sb-ext:with-timeout 5
+      (loop until (= 0 (read-register :lutafsr))))))
+
+(defparameter *image-endianness* 0)     ;; little
+(defparameter *image-rotation* 0)       ;; normal
+(defparameter *image-bpp* 3)            ;; bitmap
+
+(defun set-framebuffer-address (address)
+  (write-register :lisar+2 (ldb (byte 16 16) address))
+  (write-register :lisar+0 (ldb (byte 16 0) address)))
+
+(defun read-word-from-bitmap (bitmap row offset)
+  (unless (zerop (mod offset 16))
+    (error "bitmap offset ~A not word aligned" offset))
+  (loop for i from 0 below 16
+        sum (ash (bit bitmap row (+ offset i)) i)))
+
+;; (test 'read-word-from-bitmap
+;;   (let ((canvas (make-array '(32 32) :element-type 'bit)))
+;;     (setf (bit canvas 0 0) 1
+;;           (bit canvas 0 1) 1
+;;           (bit canvas 1 30) 1)
+;;     (assert-equalp
+;;      (read-word-from-bitmap canvas 0 0)
+;;      #b1100000000000000)
+;;     (assert-equalp
+;;      (read-word-from-bitmap canvas 0 16)
+;;      0)
+;;     (assert-equalp
+;;      (read-word-from-bitmap canvas 1 16)
+;;      #b0000000000000010)))
+
+(defparameter *pixel-rounding* 32)
+
+(defun round-down-to-word (i)
+  (* *pixel-rounding* (truncate i *pixel-rounding*)))
+
+(defun round-up-to-word (i)
+  (* *pixel-rounding*
+     (truncate (+ i *pixel-rounding* -1)
+               *pixel-rounding*)))
+
+(defun copy-area-to-framebuffer (x y w h)
+  (setf x (round-down-to-word x)
+        y (round-down-to-word y)
+        w (min *display-width* (round-up-to-word w))
+        h (min *display-height* (round-up-to-word h)))
+  (wait-for-display)
+  (set-framebuffer-address *framebuffer-address*)
+  (let* ((format (logior (ash *image-endianness* 8)
+                         (ash *image-bpp* 4)
+                         (ash *image-rotation* 0)))
+         (args (list format (/ x 8) y (/ w 8) h)))
+    (write-command :load-img-area-start)
+    (write-word-packets args))
+  (loop
+    for i from y below (+ y h)
+    do (loop
+         for j from x by 16 below (+ x w)
+         do
+            (note `(pixels ,i ,j))
+            (write-word-packet
+             (lognot
+              (read-word-from-bitmap *local-framebuffer* i j)))))
+  (write-command :load-img-end))
+
+(defun write-register-bit (register &key index bit)
+  (let ((value (read-register register)))
+    (write-register register (dpb bit (byte 1 index) value))))
+
+(defparameter *a2-mode* 6)
+(defparameter *initialize-mode* 0)
+
+(defun display-area (&key address rectangle mode)
+  (destructuring-bind (&key x y w h) rectangle
+    (setf x (round-down-to-word x)
+          y (round-down-to-word y)
+          w (min *display-width* (round-up-to-word w))
+          h (min *display-height* (round-up-to-word h)))
+    (ecase mode
+      (:fast-monochrome
+       (progn
+         (write-register-bit :up1sr+2 :index 2 :bit 1)
+         (write-register :bgvr #xf0)
+         (write-command :display-area-buf)
+         (write-word-packets
+          (list x y w h *a2-mode*
+                (ldb (byte 16 0) address)
+                (ldb (byte 16 16) address)))
+         (wait-for-display)
+         (write-register-bit :up1sr+2 :index 2 :bit 0)))
+      (:initialize
+       (progn
+         (write-command :display-area)
+         (write-word-packets
+          (list x y w h *initialize-mode*)))))))

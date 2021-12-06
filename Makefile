@@ -1,8 +1,5 @@
-epap: epap.zig Makefile 
-	zig build --verbose
-
-build: epap
+build:; zig build --verbose
 clean:; rm epap
 save:; git save && git push
 test:; ./run-test.sh
-yolo: epap test save
+yolo: build test save

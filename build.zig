@@ -4,6 +4,13 @@ pub fn build(b: *std.build.Builder) void {
     const target = b.standardTargetOptions(.{});
     const mode = b.standardReleaseOptions();
 
+    const exec = b.addExecutable("exec", null);
+    exec.setTarget(target);
+    exec.setBuildMode(mode);
+    exec.linkSystemLibrary("c");
+    exec.addCSourceFile("exec.c", &.{});
+    exec.install();
+
     const text = b.addSharedLibrary("epapi-text", null, .unversioned);
     text.setTarget(target);
     text.setBuildMode(mode);
@@ -25,7 +32,7 @@ pub fn build(b: *std.build.Builder) void {
         &.{ "-DHAVE_FREETYPE", "-fno-sanitize=undefined" },
     );
 
-    const epapi = b.addSharedLibrary("epapi", "epap.zig", .unversioned);
+    const epapi = b.addSharedLibrary("epapi", null, .unversioned);
 
     epapi.setTarget(target);
     epapi.setBuildMode(mode);

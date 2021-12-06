@@ -15,6 +15,7 @@ stdenv.mkDerivation {
     lispPackages.babel
     lispPackages.zpng
     lispPackages.cl-base64
+    lispPackages.clwrapper
   ];
   preBuild = ''
     export HOME=$TMPDIR

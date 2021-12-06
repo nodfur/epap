@@ -150,7 +150,7 @@
 
 ;; (draw-letter #\y (* 16 9) (+ 1024 128))
 
-(change-font :dm-mono 48)
+(change-font :dm-mono 24)
 
 (defun poem (dx dy text)
   (loop for c across text
@@ -158,26 +158,45 @@
         do
            (if (eql c #\Newline)
                (progn
-                 (delay-milliseconds 500)
                  (setf x 0)
                  (incf y 60))
                (progn
-                 (draw-letter c (+ dx x) (+ dy y) 48 72)
-                 (incf x 28)))))
+                 (draw-letter c (+ dx x) (+ dy y) 24 36)
+                 (incf x 14)))))
 
-(defun anecdote-of-the-jar ()
-  (poem 500 100
-        "I placed a jar in Tennessee,
+(defparameter anecdote-of-the-jar
+  "I placed a jar in Tennessee,
 And round it was, upon a hill.
 It made the slovenly wilderness
-Surround that hill.
+Surround that hill.")
 
-The wilderness rose up to it,
-And sprawled around, no longer wild.
-The jar was round upon the ground
-And tall and of a port in air.
+(defun time-poem (text)
+  (let ((timing nil))
+    (sb-impl::call-with-timing
+     (lambda (&rest x)
+       (setf timing x))
+     (lambda ()
+       (poem 500 100 text)))
+    timing))
 
-It took dominion everywhere.
-The jar was gray and bare.
-It did not give of bird or bush,
-Like nothing else in Tennessee."))
+(require :sb-sprof)
+
+(defun profile-poem (text)
+  (sb-sprof:with-profiling
+      (:max-samples 4000 :report :flat :loop nil)
+    (time-poem anecdote-of-the-jar)))
+
+(defun canvas-to-png (canvas)
+  (let* ((height (array-dimension canvas 0))
+         (width (array-dimension canvas 1))
+         (png (make-instance 'zpng:png
+                             :color-type :grayscale
+                             :width width
+                             :height height))
+         (image (zpng:data-array png)))
+    (dotimes (y height png)
+      (dotimes (x width)
+        (setf (aref image y x 0)
+              (- 255 (* 255 (aref canvas y x))))))))
+
+;; (zpng:write-png (canvas-to-png *local-framebuffer*) "frame.png")

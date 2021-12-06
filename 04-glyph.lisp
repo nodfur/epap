@@ -301,11 +301,19 @@
 (defun change-font (name height)
   (setf *current-font* (find-font name height)))
 
+(defmacro with-hb-buffer (var &body body)
+  `(let ((,var (hb-buffer-create)))
+     (unwind-protect (progn ,@body)
+       (hb-buffer-destroy ,var))))
+
+(defun read-foreign-array (&key pointer element-type count)
+  (foreign-array-to-lisp pointer `(:array ,element-type ,count)))
+
 (defun shape-text (text &key
                           (language "en")
                           (direction :left-to-right)
                           (script "Latn"))
-  (let ((buffer (hb-buffer-create)))
+  (with-hb-buffer buffer
     (hb-buffer-set-direction buffer direction)
     (hb-buffer-set-script buffer (hb-script-from-string script -1))
     (hb-buffer-set-language buffer (hb-language-from-string language -1))
@@ -313,16 +321,16 @@
     (hb-shape (font-harfbuzz-ptr *current-font*) buffer (null-pointer) 0)
     (with-foreign-object (glyph-count :uint32)
       (let* ((glyph-infos
-               (foreign-array-to-lisp
-                (hb-buffer-get-glyph-infos buffer glyph-count)
-                `(:array (:struct glyph-info) ,(mem-ref glyph-count :uint32))))
+               (read-foreign-array
+                :pointer (hb-buffer-get-glyph-infos buffer glyph-count)
+                :element-type '(:struct glyph-info)
+                :count (mem-ref glyph-count :uint32)))
              (glyph-positions
-               (foreign-array-to-lisp
-                (hb-buffer-get-glyph-positions buffer glyph-count)
-                `(:array (:struct glyph-position) ,(mem-ref glyph-count :uint32)))))
-        (prog1
-            (list glyph-infos glyph-positions)
-          (hb-buffer-destroy buffer))))))
+               (read-foreign-array
+                :pointer (hb-buffer-get-glyph-positions buffer glyph-count)
+                :element-type '(:struct glyph-position)
+                :count (mem-ref glyph-count :uint32))))
+        (list glyph-infos glyph-positions)))))
 
 (test 'shape-text
   (assert-equalp

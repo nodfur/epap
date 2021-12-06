@@ -61,18 +61,5 @@
                   " ")))
     (if *dry-run* elisp (swank:eval-in-emacs elisp))))
 
-(defun canvas-to-png (canvas)
-  (let* ((height (array-dimension canvas 0))
-         (width (array-dimension canvas 1))
-         (png (make-instance 'zpng:png
-                             :color-type :grayscale
-                             :width width
-                             :height height))
-         (image (zpng:data-array png)))
-    (dotimes (y height png)
-      (dotimes (x width)
-        (setf (aref image y x 0)
-              (- 255 (* 255 (aref canvas y x))))))))
-
 (defun elisp-fun-png (width height text)
   (canvas-to-png (test-draw-line text :width width :height height)))

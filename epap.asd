@@ -23,5 +23,5 @@
                (:file "01-foreign")
                (:file "02-bcm2385")
                (:file "03-it8591")
-               (:file "04-fonts")
-               (:file "04-paper")))
+               (:file "04-glyph")
+               (:file "05-text")))

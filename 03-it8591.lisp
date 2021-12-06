@@ -199,10 +199,17 @@
     (spi-write-word word)
     (cs-high)))
 
-(defun write-word-packets (word-list)
+(defun write-multiword-packet (words)
+  (maybe-dry-run `(write-multiword-packet ,word)
+    (start-packet :write)
+    (dolist (word words)
+      (spi-write-word word))
+    (cs-high)))
+
+(defun write-word-packets (words)
   (maybe-dry-run `(write-word-packets ,word-list)
-    (loop for word in word-list
-          do (write-word-packet word))))
+    (dolist (word words)
+      (write-word-packet word))))
 
 (defun write-register (register value)
   (maybe-dry-run `(write-register ,register ,value)
@@ -347,6 +354,17 @@
      (truncate (+ i *pixel-rounding* -1)
                *pixel-rounding*)))
 
+(defun read-area-words (x y w h)
+  (loop
+    for i from y below (+ y h)
+    collecting
+    (loop
+      for j from x by 16 below (+ x w)
+      collecting (lognot
+                  (read-word-from-bitmap *local-framebuffer* i j)))))
+
+(defparameter *use-packed-writes* t)
+
 (defun copy-area-to-framebuffer (x y w h)
   (setf x (round-down-to-word x)
         y (round-down-to-word y)
@@ -360,15 +378,10 @@
          (args (list format (/ x 8) y (/ w 8) h)))
     (write-command :load-img-area-start)
     (write-word-packets args))
-  (loop
-    for i from y below (+ y h)
-    do (loop
-         for j from x by 16 below (+ x w)
-         do
-            (note `(pixels ,i ,j))
-            (write-word-packet
-             (lognot
-              (read-word-from-bitmap *local-framebuffer* i j)))))
+  (let ((words (apply #'append (read-area-words x y w h))))
+    (if *use-packed-writes*
+        (write-multiword-packet words)
+        (write-word-packets words)))
   (write-command :load-img-end))
 
 (defun write-register-bit (register &key index bit)

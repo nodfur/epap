@@ -17,7 +17,7 @@
 ;;
 
 (defpackage :epap
-  (:use :common-lisp :cffi :babel :zpng :base64))
+  (:use :common-lisp :cffi :babel :zpng :base64 :cl-ppcre))
 
 (in-package :epap)
 

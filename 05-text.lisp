@@ -125,10 +125,17 @@
 
 ;; (change-font :dm-mono 64)
 
+(defparameter *live-update* nil)
+
+(defmacro with-live-update (live-update &body body)
+  `(let ((*live-update* ,live-update))
+     ,@body))
+
 (defun draw-letter (letter x y w h)
   (draw-text-locally x y (string letter))
   (copy-area-to-framebuffer x y w h)
-  (display-area-monochrome x y w h))
+  (when *live-update*
+    (display-area-monochrome x y w h)))
 
 (defun write-whole-framebuffer ()
   (copy-area-to-framebuffer 0 0 *display-width* *display-height*))
@@ -150,7 +157,7 @@
 
 ;; (draw-letter #\y (* 16 9) (+ 1024 128))
 
-(change-font :dm-mono 24)
+(change-font :concrete-roman 64)
 
 (defun poem (dx dy text)
   (loop for c across text
@@ -158,17 +165,17 @@
         do
            (if (eql c #\Newline)
                (progn
+                 (delay-milliseconds 500)
                  (setf x 0)
-                 (incf y 60))
+                 (incf y 68))
                (progn
-                 (draw-letter c (+ dx x) (+ dy y) 24 36)
-                 (incf x 14)))))
+                 (draw-letter c (+ dx x) (+ dy y) 42 72)
+                 (incf x 28))))
+  (unless *live-update*
+    (refresh)))
 
 (defparameter anecdote-of-the-jar
-  "I placed a jar in Tennessee,
-And round it was, upon a hill.
-It made the slovenly wilderness
-Surround that hill.")
+  "I placed a jar in Tennessee.")
 
 (defun time-poem (text)
   (let ((timing nil))
@@ -176,8 +183,9 @@ Surround that hill.")
      (lambda (&rest x)
        (setf timing x))
      (lambda ()
-       (poem 500 100 text)))
-    timing))
+       (poem 200 400 text)))
+    (list :seconds (/ (getf timing :real-time-ms) 1000.0)
+          :megabytes (/ (getf timing :bytes-consed) 1024.0 1024.0))))
 
 (require :sb-sprof)
 

@@ -199,8 +199,15 @@
     (spi-write-word word)
     (cs-high)))
 
+(defun write-repetitive-multiword-packet (n value)
+  (maybe-dry-run `(write-repetitive-multiword-packet ,word)
+    (start-packet :write)
+    (dotimes (i n)
+      (spi-write-word value))
+    (cs-high)))
+
 (defun write-multiword-packet (words)
-  (maybe-dry-run `(write-multiword-packet ,word)
+    (maybe-dry-run `(write-multiword-packet ,word)
     (start-packet :write)
     (dolist (word words)
       (spi-write-word word))
@@ -310,10 +317,14 @@
      (unwind-protect (progn ,@body)
        (stop-display))))
 
+(defmacro optimistic-timeout (seconds check)
+  `(unless (loop repeat 10000 never ,check)
+     (sb-ext:with-timeout 5
+       (loop until ,check))))
+
 (defun wait-for-display ()
   (maybe-dry-run '(wait-for-display)
-    (sb-ext:with-timeout 5
-      (loop until (= 0 (read-register :lutafsr))))))
+    (optimistic-timeout 5 (zerop (read-register :lutafsr)))))
 
 (defparameter *image-endianness* 0)     ;; little
 (defparameter *image-rotation* 0)       ;; normal
@@ -365,19 +376,27 @@
 
 (defparameter *use-packed-writes* t)
 
-(defun copy-area-to-framebuffer (x y w h)
-  (setf x (round-down-to-word x)
-        y (round-down-to-word y)
-        w (min *display-width* (round-up-to-word w))
-        h (min *display-height* (round-up-to-word h)))
+(defmacro with-packed-writes (use-packed-writes &body body)
+  `(let ((*use-packed-writes* ,use-packed-writes))
+     ,@body))
+
+(defun start-loading-image-area (x y w h)
   (wait-for-display)
   (set-framebuffer-address *framebuffer-address*)
   (let* ((format (logior (ash *image-endianness* 8)
                          (ash *image-bpp* 4)
                          (ash *image-rotation* 0)))
-         (args (list format (/ x 8) y (/ w 8) h)))
+         (args (list format x y w h)))
     (write-command :load-img-area-start)
-    (write-word-packets args))
+    (write-word-packets args)))
+
+(defun copy-area-to-framebuffer (x y w h)
+  (setf x (round-down-to-word x)
+        y (round-down-to-word y)
+        w (min *display-width* (round-up-to-word w))
+        h (min *display-height* (round-up-to-word h)))
+  (let ((*image-bpp* 3))
+    (start-loading-image-area (/ x 8) y (/ w 8) h))
   (let ((words (apply #'append (read-area-words x y w h))))
     (if *use-packed-writes*
         (write-multiword-packet words)
@@ -414,3 +433,19 @@
          (write-command :display-area)
          (write-word-packets
           (list x y w h *initialize-mode*)))))))
+
+(defun full-screen-rectangle ()
+  (list :x 0 :y 0 :w *display-width* :h *display-height*))
+
+(defun initialize-blank-display ()
+  (let* ((*image-bpp* 2)
+         (pixel-count (* *display-width* *display-height*))
+         (bit-count (* pixel-count 4))
+         (word-count (/ bit-count 16)))
+    (start-loading-image-area 0 0 *display-width* *display-height*)
+    (write-repetitive-multiword-packet word-count #xffff)
+    (write-command :load-img-end)
+    (display-area
+     :address *framebuffer-address*
+     :rectangle (full-screen-rectangle)
+     :mode :initialize)))

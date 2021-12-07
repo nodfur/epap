@@ -17,7 +17,7 @@
 ;;
 
 (defsystem "epap"
-  :depends-on ("cffi" "babel" "zpng" "cl-base64")
+  :depends-on ("cffi" "babel" "zpng" "cl-base64" "cl-ppcre")
   :serial t
   :components ((:file "00-basic")
                (:file "01-foreign")

@@ -47,17 +47,18 @@
 (yay SELF-CHRONICLING-SYSTEM
   (imagine viewing the chronicle itself on the e-ink screen)
   (this would be a beautiful way to start the day)
-  (epap::live-poetry
-   200 200
-   (cl:with-output-to-string (text)
-     (cl:let ((cl:*print-right-margin* 46))
-       (cl:print '((date :tuesday 7 :december 2021)
-                   (yay CHRONICLE-STARTED
-                     (this is a funny idea)
-                     (it is like an issue tracker inside the program)
-                     (we can reference symbols)
-                     (there is a function #'EPAP::DRAW-LETTER)))
-                 text)))))
+  (epap::with-font :dm-mono 48
+    (epap::live-poetry
+     200 200
+     (cl:with-output-to-string (text)
+       (cl:let ((cl:*print-right-margin* 46))
+         (cl:print '((date :tuesday 7 :december 2021)
+                     (yay CHRONICLE-STARTED
+                       (this is a funny idea)
+                       (like an issue tracker inside the program)
+                       (we can reference symbols
+                           (there is a function #'EPAP::DRAW-LETTER))))
+                   text))))))
 
 (yay VARIABLE-WIDTH-POETRY
   (done LIVE-RENDER-POEM-WITH-SHAPING

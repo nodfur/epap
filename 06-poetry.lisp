@@ -258,9 +258,8 @@ Stallī bērus kumeliņus")
   (progn
     (slowly-clear)
     (with-packed-writes t
-      (with-font :dm-mono 48
-        (with-live-update nil
-          (time-poem x y text))))))
+      (with-live-update nil
+        (time-poem x y text)))))
 
 (zpng:write-png (canvas-to-png *local-framebuffer*) "frame.png")
 

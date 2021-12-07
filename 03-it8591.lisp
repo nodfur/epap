@@ -374,7 +374,7 @@
       collecting (lognot
                   (read-word-from-bitmap *local-framebuffer* i j)))))
 
-(defparameter *use-packed-writes* t)
+(defparameter *use-packed-writes* nil)
 
 (defmacro with-packed-writes (use-packed-writes &body body)
   `(let ((*use-packed-writes* ,use-packed-writes))
@@ -391,16 +391,18 @@
     (write-word-packets args)))
 
 (defun copy-area-to-framebuffer (x y w h)
-  (setf x (round-down-to-word x)
-        y (round-down-to-word y)
-        w (min *display-width* (round-up-to-word w))
-        h (min *display-height* (round-up-to-word h)))
-  (let ((*image-bpp* 3))
-    (start-loading-image-area (/ x 8) y (/ w 8) h))
-  (let ((words (apply #'append (read-area-words x y w h))))
-    (if *use-packed-writes*
-        (write-multiword-packet words)
-        (write-word-packets words)))
+  (let* ((x% (round-down-to-word x))
+         (y% (round-down-to-word y))
+         (xe (- x x%))
+         (ye (- y y%))
+         (w% (min *display-width* (round-up-to-word (+ w xe))))
+         (h% (min *display-height* (round-up-to-word (+ h ye)))))
+    (let ((*image-bpp* 3))
+      (start-loading-image-area (/ x% 8) y% (/ w% 8) h%))
+    (let ((words (apply #'append (read-area-words x% y% w% h%))))
+      (if *use-packed-writes*
+          (write-multiword-packet words)
+          (write-word-packets words))))
   (write-command :load-img-end))
 
 (defun write-register-bit (register &key index bit)
@@ -412,27 +414,29 @@
 
 (defun display-area (&key address rectangle mode)
   (destructuring-bind (&key x y w h) rectangle
-    (setf x (round-down-to-word x)
-          y (round-down-to-word y)
-          w (min *display-width* (round-up-to-word w))
-          h (min *display-height* (round-up-to-word h)))
-    (ecase mode
-      (:fast-monochrome
-       (progn
-         (write-register-bit :up1sr+2 :index 2 :bit 1)
-         (write-register :bgvr #xf0)
-         (write-command :display-area-buf)
-         (write-word-packets
-          (list x y w h *a2-mode*
-                (ldb (byte 16 0) address)
-                (ldb (byte 16 16) address)))
-         (wait-for-display)
-         (write-register-bit :up1sr+2 :index 2 :bit 0)))
-      (:initialize
-       (progn
-         (write-command :display-area)
-         (write-word-packets
-          (list x y w h *initialize-mode*)))))))
+    (let* ((x% (round-down-to-word x))
+           (y% (round-down-to-word y))
+           (xe (- x x%))
+           (ye (- y y%))
+           (w% (min *display-width* (round-up-to-word (+ w xe))))
+           (h% (min *display-height* (round-up-to-word (+ h ye)))))
+      (ecase mode
+        (:fast-monochrome
+         (progn
+           (write-register-bit :up1sr+2 :index 2 :bit 1)
+           (write-register :bgvr #xf0)
+           (write-command :display-area-buf)
+           (write-word-packets
+            (list x% y% w% h% *a2-mode*
+                  (ldb (byte 16 0) address)
+                  (ldb (byte 16 16) address)))
+           (wait-for-display)
+           (write-register-bit :up1sr+2 :index 2 :bit 0)))
+        (:initialize
+         (progn
+           (write-command :display-area)
+           (write-word-packets
+            (list x% y% w% h% *initialize-mode*))))))))
 
 (defun full-screen-rectangle ()
   (list :x 0 :y 0 :w *display-width* :h *display-height*))

@@ -28,6 +28,36 @@
                (source-bit (if (logbitp source-bit-index source-byte) 1 0)))
           (setf (bit canvas (+ origin-y i) (+ origin-x j)) source-bit))))))
 
+(defun typeset-character (glyph-info glyph-position)
+  (let ((codepoint (getf glyph-info :codepoint)))
+    (destructuring-bind (&key x-bearing y-bearing &allow-other-keys)
+        (load-glyph *current-font* codepoint)
+      (destructuring-bind
+          (&key x-advance y-advance x-offset y-offset)
+          glyph-position
+        (let ((x (+ (truncate x-offset 64)
+                    (truncate x-bearing 64)))
+              (y (+ (truncate y-offset 64)
+                    (- (font-height *current-font*)
+                       (truncate y-bearing 64))))
+              (dx (truncate x-advance 64))
+              (dy (truncate y-advance 64)))
+          (list codepoint x y dx dy))))))
+
+(defun typeset-line (text x-origin y-origin)
+  (destructuring-bind (glyph-infos glyph-positions)
+      (shape-text text)
+    (let ((glyphs
+            (map 'list #'typeset-character
+                 glyph-infos glyph-positions)))
+      (loop
+        for (codepoint x y dx dy) in glyphs
+        collecting (list :codepoint codepoint
+                         :x (+ x-origin x-offset x)
+                         :y (+ y-origin y-offset y))
+        summing dx into x-offset
+        summing dy into y-offset))))
+
 (defun draw-text-line (text &key canvas origin-x origin-y)
   (destructuring-bind (glyph-infos glyph-positions)
       (shape-text text)
@@ -140,6 +170,14 @@
 (defun write-whole-framebuffer ()
   (copy-area-to-framebuffer 0 0 *display-width* *display-height*))
 
+(defun copy-bitmap-area-to-framebuffer (bitmap x y)
+  (destructuring-bind (&key width rows &allow-other-keys) bitmap
+    (copy-area-to-framebuffer x y width rows)))
+
+(defun display-bitmap-area (bitmap x y)
+  (destructuring-bind (&key width rows &allow-other-keys) bitmap
+    (display-area-monochrome x y width rows)))
+
 (defun refresh ()
   (display-area-monochrome 0 0 *display-width* *display-height*))
 
@@ -160,30 +198,34 @@
 (change-font :concrete-roman 64)
 
 (defun poem (dx dy text)
-  (loop for c across text
-        with x = 0 and y = 0
-        do
-           (if (eql c #\Newline)
-               (progn
-                 (delay-milliseconds 500)
-                 (setf x 0)
-                 (incf y 68))
-               (progn
-                 (draw-letter c (+ dx x) (+ dy y) 42 72)
-                 (incf x 28))))
+  (loop
+    for line in (uiop:split-string text :separator '(#\Newline))
+    do (loop
+         for thing in (typeset-line line dx dy)
+         do (destructuring-bind
+                (&key codepoint x y) thing
+              (load-glyph *current-font* codepoint)
+              (let ((bitmap (read-glyph-bitmap *current-font*)))
+                (draw-bitmap *local-framebuffer* bitmap x y)
+                (copy-bitmap-area-to-framebuffer bitmap x y)
+                (when *live-update*
+                  (display-bitmap-area bitmap x y)))))
+       (delay-milliseconds 500)
+       (incf dy (round (* 1.5 (font-height *current-font*)))))
+
   (unless *live-update*
     (refresh)))
 
 (defparameter anecdote-of-the-jar
   "I placed a jar in Tennessee.")
 
-(defun time-poem (text)
+(defun time-poem (x y text)
   (let ((timing nil))
     (sb-impl::call-with-timing
      (lambda (&rest x)
        (setf timing x))
      (lambda ()
-       (poem 200 400 text)))
+       (poem x y text)))
     (list :seconds (/ (getf timing :real-time-ms) 1000.0)
           :megabytes (/ (getf timing :bytes-consed) 1024.0 1024.0))))
 

@@ -243,8 +243,29 @@ I’ll hold to the bright path of mind.")
 (defun verses (poem)
   (split (format nil "~%~%") poem))
 
+(start-display)
+(initialize-blank-display)
 (slowly-clear)
-(enter-sleep-mode)
+(refresh)
 
-(with-live-update t
-  (time-poem (nth 0 (verses +words-from-cold-mountain+))))
+(defconstant +puti-puti+
+  "Pūti, pūti ziemelīti
+Ziemassvētku vakarāi
+Lai tie pūti rudzus, miežus
+Stallī bērus kumeliņus")
+
+(defun live-poetry (x y text)
+  (progn
+    (slowly-clear)
+    (with-packed-writes t
+      (with-font :dm-mono 48
+        (with-live-update nil
+          (time-poem x y text))))))
+
+(zpng:write-png (canvas-to-png *local-framebuffer*) "frame.png")
+
+(defun goodnight ()
+  (initialize-blank-display)
+  (enter-sleep-mode))
+
+(goodnight)

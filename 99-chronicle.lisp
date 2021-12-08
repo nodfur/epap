@@ -7,6 +7,7 @@
 (defmacro yay (id &body body) nil)
 (defmacro todo (id &body body) nil)
 (defmacro done (id &body body) nil)
+(defmacro code (&body body) nil)
 (defmacro date (weekday day month year) nil)
 
 
@@ -66,3 +67,31 @@
     (see #'EPAP::TYPESET-LINE)))
 
 (ok going home)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(date :wednesday 8 :august 2021)
+
+(yay EXHIBITING-HAN-SHAN
+  (now there is #'EPAP::COLD-MOUNTAIN)
+  (it is beautiful to see poems appearing like this)
+  (hmm STREAMING-GPT3-POETRY
+    (todo SIMPLE-GPT3-API
+      (same thing as my old Telegram thing))
+    (maybe GPT-3 integration will be a primary fun thing)))
+
+(hmm TYPESETTING
+  (now we can do basic text shaping and rendering)
+  (but we want a more capable typesetting language)
+  (like (CENTERING-HEADINGS)
+        (PARAGRAPH-WRAPPING (like Knuth))
+        (MULTI-COLUMN-LAYOUTS)
+        (CONSTRAINT-SOLVING))
+  (code
+    (page
+     (center
+      (with-font sans 92
+        "Words from Cold Mountain")
+      (with-font sans 64
+        "Twenty-Seven Poems by Han-Shan"))))
+  (todo RESEARCH-LISP-TYPESETTING))

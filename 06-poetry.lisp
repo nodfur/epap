@@ -6,6 +6,24 @@ They’re better for you than scripture-reading.
 Cut them out and paste them on a screen,
 Then you can gaze at them from time to time.
 
+A thousand clouds, ten thousand streams,
+Here I live, an idle man,
+Roaming green peaks by day,
+Back to sleep by cliffs at night.
+One by one, springs and autumns go,
+Free of heat and dust, my mind.
+Sweet to know there’s nothing I need,
+Silent as the autumn river’s flood.
+
+Han-shan has his critics too:
+‘Your poems, there’s nothing in them!’
+I think of men of ancient times,
+Poor, humble, but not ashamed.
+Let him laugh at me and say:
+‘It’s all foolishness, your work!’
+Let him go on as he is,
+All his life lost making money.
+
 Where’s the trail to Cold Mountain?
 Cold Mountain? There’s no clear way.
 Ice, in summer, is still frozen.
@@ -256,10 +274,33 @@ Stallī bērus kumeliņus")
 
 (defun live-poetry (x y text)
   (progn
-    (slowly-clear)
     (with-packed-writes t
-      (with-live-update nil
+      (with-live-update t
         (time-poem x y text)))))
+
+(defun cold-mountain ()
+  (start-display)
+  (initialize-blank-display)
+  (with-font :concrete-roman 64
+    (unwind-protect
+         (progn
+           (with-font :concrete-roman 92
+             (live-poetry 400 520
+                          "Words from Cold Mountain"))
+           (with-font :concrete-roman 64
+             (live-poetry 460 640
+                          "Twenty-Seven Poems by Han-Shan"))
+           (initialize-blank-display)
+           (loop for verse in (subseq (verses +words-from-cold-mountain+) 0 2)
+                 with i = 1
+                 do (progn
+                      (with-font :concrete-roman 92
+                        (live-poetry 200 150 (format nil "~@r" i)))
+                      (sleep 2)
+                      (live-poetry 200 300 verse)
+                      (incf i)
+                      (initialize-blank-display))))
+      (goodnight))))
 
 (zpng:write-png (canvas-to-png *local-framebuffer*) "frame.png")
 

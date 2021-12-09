@@ -76,29 +76,57 @@
 
 (defparameter *sequence* *example*)
 
+(defun minimum-width-between (a b)
+  (loop for i from a below b
+        for item = (svref *sequence* i)
+        summing (minimum-width item)))
+
 (defun next-feasible-breakpoint (origin)
   (loop for i from origin below (length *sequence*)
         for item = (svref *sequence* i)
         summing (minimum-width item) into minimum
         summing (maximum-width item) into maximum
-        do (format t "~A ~A ~A~%" item minimum maximum)
         when (and (<= minimum *paragraph-width*)
                   (>= maximum *paragraph-width*))
           return i))
 
-(defun find-next-feasible-breakpoint (origin)
-  (loop
-    for i from origin below (length *sequence*)
-    when (is-breakpoint-feasible origin i)
-      return i))
+(defun feasible (origin index)
+  (loop for i from origin below index
+        for item = (svref *sequence* i)
+        summing (minimum-width item) into minimum
+        summing (maximum-width item) into maximum
+        when (and (<= minimum *paragraph-width*)
+                  (>= maximum *paragraph-width*))
+          return i))
+
+(defun draw-item (item)
+  (ecase (car item)
+    (box (caddr item))
+    (glue "  ")
+    (forced-break "")))
 
 (defun draw-line (a b)
-  (loop
-    for i from a below b
-    collecting (draw-item (svref *sequence* i))))
+  (apply #'concatenate 'string
+         (loop
+           for i from a below b
+           collecting (draw-item (svref *sequence* i)))))
 
-(defun algorithm (sequence)
-  (let ((active '(0)))
-    (loop )
-    )
-  )
+(defun algorithm ()
+  (loop
+    with active = '(0)
+    for i from 1 below (length *sequence*)
+    do
+       (let ((new-active active))
+         (loop for tail on active
+               for a = (car tail)
+               do
+                  (if (> (minimum-width-between a i) *paragraph-width*)
+                      (progn
+                        (setf new-active tail)
+                        (format t "~A~%" new-active))
+                      (when (feasible a i)
+                        (progn
+                          (setf new-active (nconc new-active (list i)))
+                          (format t "~A~%" new-active)
+                          (return)))))
+         (setf active new-active))))

@@ -374,7 +374,7 @@
       collecting (lognot
                   (read-word-from-bitmap *local-framebuffer* i j)))))
 
-(defparameter *use-packed-writes* nil)
+(defparameter *use-packed-writes* t)
 
 (defmacro with-packed-writes (use-packed-writes &body body)
   `(let ((*use-packed-writes* ,use-packed-writes))
@@ -449,6 +449,7 @@
     (start-loading-image-area 0 0 *display-width* *display-height*)
     (write-repetitive-multiword-packet word-count #xffff)
     (write-command :load-img-end)
+    (clear-local-framebuffer)
     (display-area
      :address *framebuffer-address*
      :rectangle (full-screen-rectangle)

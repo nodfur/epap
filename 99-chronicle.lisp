@@ -9,7 +9,7 @@
 (defmacro done (id &body body) nil)
 (defmacro code (&body body) nil)
 (defmacro date (weekday day month year) nil)
-
+(defmacro see (&body resources) nil)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -70,7 +70,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(date :wednesday 8 :august 2021)
+(date :wednesday 8 :december 2021)
 
 (yay EXHIBITING-HAN-SHAN
   (now there is #'EPAP::COLD-MOUNTAIN)
@@ -95,3 +95,23 @@
       (with-font sans 64
         "Twenty-Seven Poems by Han-Shan"))))
   (todo RESEARCH-LISP-TYPESETTING))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(date :thursday 9 :december 2021)
+
+(hmm KNUTH-PLASS-ALGORITHM
+  (the TeX standard algorithm for paragraph layout)
+  (see
+    (KNUTH-PLASS-1981
+     (article "Breaking Paragraphs into Lines")
+     (url "http://www.eprg.org/G53DOC/pdfs/knuth-plass-breaking.pdf"))
+    (KNUTH-PLASS-THOUGHTS
+     (github :user "jaroslov" :repo "knuth-plass-thoughts")))
+  
+  (the basic idea is to minimize a measure of badness
+       (but brute force would be extravagantly expensive)
+       (elasticity parameters rule out most breakpoints)
+       (then we explore a search tree with pruning))
+
+  (todo TRY-IMPLEMENTING-KNUTH-PLASS))

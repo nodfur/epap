@@ -5,3 +5,18 @@
  :port 4005
  :style :spawn
  :dont-close t)
+
+(ql:quickload '(:trivia
+                :babel
+                :cffi
+                :zpng
+                :cl-base64
+                :cl-ppcre
+                :trivia
+                :parenscript
+                :spinneret
+                :css-lite
+                :hunchentoot
+                :iterate
+                :printv
+                ))

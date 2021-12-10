@@ -73,7 +73,9 @@
   (bcm2835-gpio-write (pin-number pin) bit))
 
 (defun delay-milliseconds (ms)
-  (bcm2835-delay ms))
+  (if *dry-run*
+      (sleep (/ ms 1000))
+      (bcm2835-delay ms)))
 
 (defun delay-microseconds (us)
   (bcm2835-delaymicroseconds us))

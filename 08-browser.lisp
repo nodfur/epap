@@ -1,8 +1,4 @@
 ;;
-;; Load foreign symbols from FreeType, Harfbuzz, libcap, etc.
-;;
-;; They're all built into one shared library file using Zig.
-;;
 ;; Copyright (C) 2021  Restless Hypermedia, Inc.
 ;;
 ;; This program is free software: you can redistribute it and/or
@@ -22,8 +18,17 @@
 
 (in-package :epap)
 
-(define-foreign-library epapi
-  (:unix (:or "./zig-out/lib/libepapi.so"
-              "./zig-out/lib/libepapi-text.dylib")))
+(defun web-app () 
+  (hunchentoot:start (make-instance 'hunchentoot:easy-acceptor :port 4242))
 
-(use-foreign-library epapi)
+  (hunchentoot:define-easy-handler (epap :uri "/epap") ()
+    (with-html-string
+      (:html
+       (:head (:title "EPAP"))
+       (:body
+        (let* ((*display-width* 1872)
+               (*display-height* 1404)
+               (*local-framebuffer* (make-array (list *display-height* *display-width*)
+                                                :element-type 'bit)))
+          )
+        (:img :src (format nil "data:image/png;base64,~S" "")))))))

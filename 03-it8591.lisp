@@ -112,9 +112,7 @@
     (:display-area #x34)
     (:display-area-buf #x37)))
 
-(defun initialize-bcm2835 ()
-  (no-dry-run)
-
+(defun-with-dry-run initialize-bcm2835 ()
   (unless (bcm2835-init)
     (error "bcm2835_init failed"))
   (unless (bcm2835-spi-begin)
@@ -124,8 +122,7 @@
   (bcm2835-spi-setDataMode :mode-0)
   (bcm2835-spi-setClockDivider :divider-32))
 
-(defun close-bcm2835 ()
-  (no-dry-run)
+(defun-with-dry-run close-bcm2835 ()
   (gpio-write :cs 0)
   (gpio-write :rst 0)
   (bcm2835-spi-end)
@@ -150,7 +147,7 @@
 (defun cs-high ()
   (gpio-write :cs 1))
 
-(defun initialize-gpio ()
+(defun-with-dry-run initialize-gpio ()
   (gpio-mode :rst :output)
   (gpio-mode :cs :output)
   (gpio-mode :busy :input)
@@ -162,11 +159,10 @@
   (spi-write-word (packet-type-number packet-type))
   (gpio-wait))
 
-(defun write-command (cmd)
-  (maybe-dry-run `(write-command ,cmd)
-    (start-packet :command)
-    (spi-write-word (command-number cmd))
-    (cs-high)))
+(defun-with-dry-run write-command (cmd)
+  (start-packet :command)
+  (spi-write-word (command-number cmd))
+  (cs-high))
 
 (defun spi-write-word (x)
   (no-dry-run)
@@ -193,36 +189,31 @@
   (prog1 (spi-read-word)
     (cs-high)))
 
-(defun write-word-packet (word)
-  (maybe-dry-run `(write-word-packet ,word)
-    (start-packet :write)
-    (spi-write-word word)
-    (cs-high)))
+(defun-with-dry-run write-word-packet (word)
+  (start-packet :write)
+  (spi-write-word word)
+  (cs-high))
 
-(defun write-repetitive-multiword-packet (n value)
-  (maybe-dry-run `(write-repetitive-multiword-packet ,word)
-    (start-packet :write)
-    (dotimes (i n)
-      (spi-write-word value))
-    (cs-high)))
+(defun-with-dry-run write-repetitive-multiword-packet (n value)
+  (start-packet :write)
+  (dotimes (i n)
+    (spi-write-word value))
+  (cs-high))
 
-(defun write-multiword-packet (words)
-    (maybe-dry-run `(write-multiword-packet ,word)
-    (start-packet :write)
-    (dolist (word words)
-      (spi-write-word word))
-    (cs-high)))
+(defun-with-dry-run write-multiword-packet (words)
+  (start-packet :write)
+  (dolist (word words)
+    (spi-write-word word))
+  (cs-high))
 
-(defun write-word-packets (words)
-  (maybe-dry-run `(write-word-packets ,word-list)
-    (dolist (word words)
-      (write-word-packet word))))
+(defun-with-dry-run write-word-packets (words)
+  (dolist (word words)
+    (write-word-packet word)))
 
-(defun write-register (register value)
-  (maybe-dry-run `(write-register ,register ,value)
-    (write-command :write-register)
-    (write-word-packet (register-number register))
-    (write-word-packet value)))
+(defun-with-dry-run write-register (register value)
+  (write-command :write-register)
+  (write-word-packet (register-number register))
+  (write-word-packet value))
 
 (defun read-register (register)
   (write-command :read-register)
@@ -249,20 +240,28 @@
   width height address firmware-version lut-version)
 
 (defun get-system-info ()
-  (write-command :dev-info)
-  (start-reading)
-  (prog1
+  (if *dry-run*
       (make-system-info
-       :width (spi-read-word)
-       :height (spi-read-word)
-       :address (spi-read-address)
-       :firmware-version
-       (babel:octets-to-string (spi-read-bytes 16) :encoding :ascii)
-       :lut-version
-       (babel:octets-to-string (spi-read-bytes 16) :encoding :ascii))
-    (cs-high)))
+       :width 1872
+       :height 1404
+       :address #xdeadbeef
+       :firmware-version "firmware"
+       :lut-version "lookup-table")
+      (progn
+        (write-command :dev-info)
+        (start-reading)
+        (prog1
+            (make-system-info
+             :width (spi-read-word)
+             :height (spi-read-word)
+             :address (spi-read-address)
+             :firmware-version
+             (babel:octets-to-string (spi-read-bytes 16) :encoding :ascii)
+             :lut-version
+             (babel:octets-to-string (spi-read-bytes 16) :encoding :ascii))
+          (cs-high)))))
 
-(defun reset-display ()
+(defun-with-dry-run reset-display ()
   (gpio-write :rst 1)
   (delay-milliseconds 200)
   (gpio-write :rst 0)
@@ -270,7 +269,7 @@
   (gpio-write :rst 1)
   (delay-milliseconds 200))
 
-(defun set-vcom (vcom)
+(defun-with-dry-run set-vcom (vcom)
   (write-command :vcom)
   (write-word-packet 1)
   (write-word-packet (round (* 1000 (abs vcom)))))
@@ -292,7 +291,7 @@
                                    (multiple-value-list (eval (read))))
                     vcom))))))
 
-(defun enter-sleep-mode ()
+(defun-with-dry-run enter-sleep-mode ()
   (write-command :sleep))
 
 (defun start-display ()
@@ -322,9 +321,8 @@
      (sb-ext:with-timeout 5
        (loop until ,check))))
 
-(defun wait-for-display ()
-  (maybe-dry-run '(wait-for-display)
-    (optimistic-timeout 5 (zerop (read-register :lutafsr)))))
+(defun-with-dry-run wait-for-display ()
+  (optimistic-timeout 5 (zerop (read-register :lutafsr))))
 
 (defparameter *image-endianness* 0)     ;; little
 (defparameter *image-rotation* 0)       ;; normal
@@ -380,7 +378,7 @@
   `(let ((*use-packed-writes* ,use-packed-writes))
      ,@body))
 
-(defun start-loading-image-area (x y w h)
+(defun-with-dry-run start-loading-image-area (x y w h)
   (wait-for-display)
   (set-framebuffer-address *framebuffer-address*)
   (let* ((format (logior (ash *image-endianness* 8)
@@ -390,7 +388,7 @@
     (write-command :load-img-area-start)
     (write-word-packets args)))
 
-(defun copy-area-to-framebuffer (x y w h)
+(defun-with-dry-run copy-area-to-framebuffer (x y w h)
   (let* ((x% (round-down-to-word x))
          (y% (round-down-to-word y))
          (xe (- x x%))
@@ -412,7 +410,7 @@
 (defparameter *a2-mode* 6)
 (defparameter *initialize-mode* 0)
 
-(defun display-area (&key address rectangle mode)
+(defun-with-dry-run display-area (&key address rectangle mode)
   (destructuring-bind (&key x y w h) rectangle
     (let* ((x% (round-down-to-word x))
            (y% (round-down-to-word y))

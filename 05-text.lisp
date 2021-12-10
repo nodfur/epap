@@ -111,11 +111,11 @@
        (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
        (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0))))
 
-(defun test-write-area-to-framebuffer (width height text &optional (x 0) (y 0))
-  (write-area-to-framebuffer
-   :address *framebuffer-address*
-   :rectangle (list :x x :y y :w width :h height)
-   :bitmap (test-draw-line text :width width :height height)))
+;; (defun test-write-area-to-framebuffer (width height text &optional (x 0) (y 0))
+;;   (write-area-to-framebuffer
+;;    :address *framebuffer-address*
+;;    :rectangle (list :x x :y y :w width :h height)
+;;    :bitmap (test-draw-line text :width width :height height)))
 
 ;; (defun clear-framebuffer ()
 ;;   (write-area-to-framebuffer
@@ -125,7 +125,7 @@
 ;;                        :element-type 'bit
 ;;                        :initial-element 1)))
 
-(defun display-area-monochrome (x y width height)
+(defun-with-dry-run display-area-monochrome (x y width height)
   (display-area :address *framebuffer-address*
                 :rectangle (list :x x :y y :w width :h height)
                 :mode :fast-monochrome))
@@ -174,7 +174,7 @@
   (destructuring-bind (&key width rows &allow-other-keys) bitmap
     (copy-area-to-framebuffer x y width rows)))
 
-(defun display-bitmap-area (bitmap x y)
+(defun-with-dry-run display-bitmap-area (bitmap x y)
   (destructuring-bind (&key width rows &allow-other-keys) bitmap
     (display-area-monochrome x y width rows)))
 
@@ -229,12 +229,12 @@
     (list :seconds (/ (getf timing :real-time-ms) 1000.0)
           :megabytes (/ (getf timing :bytes-consed) 1024.0 1024.0))))
 
-(require :sb-sprof)
+;; (require :sb-sprof)
 
-(defun profile-poem (text)
-  (sb-sprof:with-profiling
-      (:max-samples 4000 :report :flat :loop nil)
-    (time-poem anecdote-of-the-jar)))
+;; (defun profile-poem (text)
+;;   (sb-sprof:with-profiling
+;;       (:max-samples 4000 :report :flat :loop nil)
+;;     (time-poem anecdote-of-the-jar)))
 
 (defun canvas-to-png (canvas)
   (let* ((height (array-dimension canvas 0))

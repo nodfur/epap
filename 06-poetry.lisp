@@ -1,6 +1,6 @@
-(in-package :epapi)
+(in-package :epap)
 
-(defconstant +words-from-cold-mountain+
+(defparameter *words-from-cold-mountain*
   "Don’t you know the poems of Han-shan?
 They’re better for you than scripture-reading.
 Cut them out and paste them on a screen,
@@ -261,12 +261,12 @@ I’ll hold to the bright path of mind.")
 (defun verses (poem)
   (split (format nil "~%~%") poem))
 
-(start-display)
-(initialize-blank-display)
-(slowly-clear)
-(refresh)
+;; (start-display)
+;; (initialize-blank-display)
+;; (slowly-clear)
+;; (refresh)
 
-(defconstant +puti-puti+
+(defvar *puti-puti*
   "Pūti, pūti ziemelīti
 Ziemassvētku vakarāi
 Lai tie pūti rudzus, miežus
@@ -291,7 +291,7 @@ Stallī bērus kumeliņus")
              (live-poetry 460 640
                           "Twenty-Seven Poems by Han-Shan"))
            (initialize-blank-display)
-           (loop for verse in (subseq (verses +words-from-cold-mountain+) 0 2)
+           (loop for verse in (subseq (verses *words-from-cold-mountain*) 0 2)
                  with i = 1
                  do (progn
                       (with-font :concrete-roman 92
@@ -302,10 +302,10 @@ Stallī bērus kumeliņus")
                       (initialize-blank-display))))
       (goodnight))))
 
-(zpng:write-png (canvas-to-png *local-framebuffer*) "frame.png")
+; (zpng:write-png (canvas-to-png *local-framebuffer*) "frame.png")
 
 (defun goodnight ()
   (initialize-blank-display)
   (enter-sleep-mode))
 
-(goodnight)
+; (goodnight)

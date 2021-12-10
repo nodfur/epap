@@ -66,8 +66,6 @@
     (see #'EPAP::POEM)
     (see #'EPAP::TYPESET-LINE)))
 
-(ok going home)
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (date :wednesday 8 :december 2021)
@@ -115,3 +113,12 @@
        (then we explore a search tree with pruning))
 
   (todo TRY-IMPLEMENTING-KNUTH-PLASS))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(date :friday 10 :december 2021)
+
+(hmm DRY-RUN
+  (now we can run #'EPAP::COLD-MOUNTAIN with #'EPAP::DRY-RUN)
+  (now we have #'EPAP::DEFUN-WITH-DRY-RUN)
+  (like a primitive object dispatch system))

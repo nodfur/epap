@@ -17,7 +17,8 @@
 ;;
 
 (defpackage :epap
-  (:use :common-lisp :cffi :babel :zpng :base64 :cl-ppcre))
+  (:use :common-lisp :cffi :babel :zpng :base64 :cl-ppcre
+        :spinneret))
 
 (in-package :epap)
 
@@ -58,22 +59,29 @@
 ;; Dry run functionality
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defparameter *dry-run* nil)
+(defparameter *dry-run* t)
 (defvar *dry-run-log* ())
 
-(defmacro maybe-dry-run (message &body body)
+(defmacro maybe-dry-run (&body body)
   `(if *dry-run*
-       (setf *dry-run-log* (cons ,message *dry-run-log*))
+       (setf *dry-run-log* (cons ,body *dry-run-log*))
        (progn ,@body)))
+
+(defun log-dry-run (datum)
+  (setf *dry-run-log* (cons datum *dry-run-log*)))
+
+(defmacro defun-with-dry-run (name lambda-list &body body)
+  (let ((args (remove '&key lambda-list)))
+    `(defun ,name ,lambda-list
+       (if *dry-run*
+           (log-dry-run (append (list ',name) (list ,@args)))
+           (progn ,@body)))))
 
 (defmacro dry-run (&body body)
   `(let ((*dry-run* t)
          (*dry-run-log* ()))
      (values (progn ,@body)
              (nreverse *dry-run-log*))))
-
-(defmacro note (x)
-  `(maybe-dry-run ,x nil))
 
 (defun no-dry-run ()
   (when *dry-run*

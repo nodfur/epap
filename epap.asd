@@ -17,11 +17,27 @@
 ;;
 
 (defsystem "epap"
-  :depends-on ("cffi" "babel" "zpng" "cl-base64" "cl-ppcre")
+  :depends-on ("cffi"
+               "babel"
+               "zpng"
+               "cl-base64"
+               "cl-ppcre"
+               "trivia"
+               "parenscript"
+               "spinneret"
+               "css-lite"
+               "hunchentoot"
+               "iterate"
+               "printv")
   :serial t
   :components ((:file "00-basic")
                (:file "01-foreign")
                (:file "02-bcm2385")
                (:file "03-it8591")
                (:file "04-glyph")
-               (:file "05-text")))
+               (:file "05-text")
+               (:file "06-poetry")
+               (:file "07-paragraph")
+               (:file "08-browser")
+               ;(:file "99-chronicle")
+               ))

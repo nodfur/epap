@@ -4,7 +4,6 @@
   openssl,
 
   zig,        # for building C/C++ and low-level functions
-  libcap,     # for manipulating Linux capabilities
   sbcl,       # Steel Bank Common Lisp
   texlive,    # for TeX, LaTeX, XeTeX, etc
   imagemagick # for resizing images, etc
@@ -16,13 +15,11 @@ stdenv.mkDerivation {
   src = ./.;
   buildInputs = [
     pkg-config
-    zig
-    libcap
     sbcl
     openssl
-    texlive.combined.scheme-medium
+    texlive.combined.scheme-full
     imagemagick
-  ];
+  ] ++ (if zig == null then [] else [zig]);
   preBuild = ''
     export HOME=$TMPDIR
   '';

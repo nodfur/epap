@@ -19,9 +19,10 @@
 (in-package :epap)
 
 (defun latex-preamble ()
-  (format t "\\documentclass[11pt,twocolumn]{extarticle}
+  (format t "\\documentclass[10pt,twocolumn]{extarticle}
 \\usepackage[paperwidth=209.66mm,paperheight=157.25mm,margin=0.8cm,includefoot]{geometry}
 \\usepackage[width=209.66mm,height=157.25mm,center,frame,noinfo]{crop}
+\\usepackage{ebgaramond}
 \\begin{document}
 "))
 
@@ -80,6 +81,11 @@
     (display-image (latex-png (format t "Hello, world!")))
     (sleep 5)))
 
+(defun save-image (path image)
+  (with-open-file (output path :element-type '(unsigned-byte 8)
+                          :direction :output :if-exists :supersede)
+    (png:encode image output)))
+
 (defun real-latex-demo ()
   (for-real
     (start-display)
@@ -92,8 +98,83 @@
   (swank::read-from-minibuffer-in-emacs prompt))
 
 (defmacro display-latex (&body document)
-  `(display-image
-    (latex-png ,@document)))
+  `(display-image (latex-png ,@document)))
+
+(defmacro save-latex (path &body document)
+  `(save-image ,path (latex-png ,@document)))
+
+(save-latex "alexander.png"
+  (format t "
+\\section{The Family}
+
+\\textbf{The nuclear family is not by itself a viable social form.}
+
+Until a few years ago, human society was based on the extended family:
+a family of at least three generations, with parents, children,
+grandparents, uncles, aunts, and cousins, all living together in a
+single or loosely knit multiple household. But today people move
+hundreds of miles to marry, to find education, and to work. Under
+these circumstances the only family units which are left are those
+units called nuclear families: father, mother, and children. And many
+of these are broken down even further by divorce and separation.
+
+Unfortunately, it seems very likely that the nuclear family is not a
+viable social form. It is too small. Each person in a nuclear family
+is too tightly linked to other members of the family; any one
+relationship which goes sour, even for a few hours, becomes critical;
+people cannot simply turn away toward uncles, aunts, grandchildren,
+cousins, brothers. Instead, each difficulty twists the family unit
+into ever tighter spirals of discomfort; the children become prey to
+all kinds of dependencies and oedipal neuroses; the parents are so
+dependent on each other that they are finally forced to separate.
+
+Philip Slater describes this situation for American families and finds
+in the adults of the family, especially the women, a terrible,
+brooding sense of deprivation. There are simply not enough people
+around, not enough communal action, to give the ordinary experience
+around the home any depth or richness.\\footnote{Philip E. Slater,
+\\emph{The Pursuit of Loneliness}, Boston: Beacon Press, 1970, p. 67,
+and throughout.}
+
+It seems essential that the people in a household have at least a
+dozen people round them, so that they can find the comfort and
+relationships they need to sustain them during their ups and
+downs. Since the old extended family, based on blood ties, seems to be
+gone---at least for the moment---this can only happen if small
+families, couples, and single people join together in voluntary
+``families'' of ten or so.
+
+Physically, the setting for a large voluntary family must provide for
+a balance of privacy and communality. Each small family, each person,
+each couple, needs a private realm, almost a private household of
+their own, according to their territorial need. In the movement to
+build communes, it is our experience that groups have not taken this
+need for privacy seriously enough. It has been shrugged off, as
+something to overcome. But it is a deep and basic need; and if the
+setting does not let each person and each small household regulate
+itself on this dimension, it is sure to cause trouble. We propose,
+therefore, that individuals, couples, people young and old---each
+subgroup---have its own legally independent household---in some cases,
+physically separate households and cottages, at least separate rooms,
+suites, and floors.
+
+The private realms are then set off against the common space and the
+common functions. The most vital commons are the kitchen, the place to
+sit down and eat, and a garden. Common meals, at least several nights
+a week, seem to play the biggest role in binding the group. The meals,
+and taking time at the cooking, provide the kind of casual meeting
+time when everything else can be comfortably discussed: the child care
+arrange\\-ments, maintenance, projects---see \\textsc{communal
+eating (147)}.
+
+This would suggest, then, a large family room---farmhouse kitchen,
+right at the heart of the site---at the main crossroads, where
+everyone would tend to meet toward the end of the day. Again,
+according to the style of the family, this might be a separate
+building, with workshop and gardens, or one wing of a house, or the
+entire first floor of a two or three story building.
+"))
+
 
 (defun babble-2 (prompt)
   (with-display

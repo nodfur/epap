@@ -1,23 +1,27 @@
-(ql:quickload '(:cffi))
+(ql:quickload '(:cffi :cffi-toolchain :cl-ppcre))
 
-(defun pkg-config-add-lib (libname)
-  (let ((process (sb-ext:run-program "/usr/bin/env"
-                                     (list "pkg-config" libname "--libs-only-L")
-                                     :input t :output :stream :wait t)))
-    (let ((stream (sb-ext:process-output process)))
-      (loop for line = (read-line stream nil nil)
-            while line do
-              ;; Drop "-L" part, and add '/' to the end. '/' IS necessary!
-              (loop for item in (uiop:split-string line)
-                    do (pushnew (pathname (concatenate 'string (subseq item 2) "/"))
-                                cffi:*foreign-library-directories*)))
-      (prog1 cffi:*foreign-library-directories*
-        (sb-ext:process-close process)))))
+(defun run-pkg-config (name command)
+  (uiop:split-string
+   (ppcre:regex-replace
+    "\\n$"
+    (uiop:run-program `("pkg-config" ,name ,command)
+                      :output :string)
+    "")))
+
+(defun pkg-config-library (name)
+  (let ((compiler-flags (run-pkg-config name "--cflags"))
+        (linker-flags (run-pkg-config name "--libs-only-L")))
+    (loop for item in linker-flags do
+      (pushnew (pathname (format nil "~a/" (subseq item 2)))
+               cffi:*foreign-library-directories*
+               :test #'equal))
+    (loop for item in compiler-flags do
+      (pushnew item cffi-toolchain:*cc-flags* :test #'equal))))
 
 ;; (setf cffi:*foreign-library-directories* '())
 
-(pkg-config-add-lib "libcrypto")
-(pkg-config-add-lib "libpng")
+(pkg-config-library "libcrypto")
+(pkg-config-library "libpng")
 
 (ql:quickload '(:trivia
                 :babel

@@ -52,5 +52,5 @@ pub fn build(b: *std.build.Builder) void {
     );
 
     text.install();
-    // epapi.install();
+    epapi.install();
 }

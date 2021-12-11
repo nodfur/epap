@@ -16,7 +16,7 @@
 ;; <http://www.gnu.org/licenses/>.
 ;;
 
-(defpackage :epap
+(uiop:define-package :epap
   (:use :common-lisp :cffi :babel :zpng :base64 :cl-ppcre
         :spinneret))
 

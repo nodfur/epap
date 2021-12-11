@@ -16,7 +16,7 @@
 ;; <http://www.gnu.org/licenses/>.
 ;;
 
-(defpackage :epap-dev
+(uiop:define-package :epap-dev
   (:use :clim :clim-lisp))
 
 (in-package :epap-dev)

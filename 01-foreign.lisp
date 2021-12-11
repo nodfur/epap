@@ -23,7 +23,7 @@
 (in-package :epap)
 
 (define-foreign-library epapi
-  (:unix (:or "./zig-out/lib/libepapi-text.so"
+  (:unix (:or "./zig-out/lib/libepapi.so"
               "./zig-out/lib/libepapi-text.dylib")))
 
 (use-foreign-library epapi)

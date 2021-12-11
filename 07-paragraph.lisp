@@ -16,7 +16,7 @@
 ;; <http://www.gnu.org/licenses/>.
 ;;
 
-(defpackage :knuth-plass
+(uiop:define-package :knuth-plass
   (:use :common-lisp))
 
 (in-package :knuth-plass)

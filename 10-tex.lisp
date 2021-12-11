@@ -19,8 +19,8 @@
 (in-package :epap)
 
 (defun latex-preamble ()
-  (format t "\\documentclass[17pt]{extarticle}
-\\usepackage[paperwidth=209.66mm,paperheight=157.25mm,margin=2cm]{geometry}
+  (format t "\\documentclass[11pt,twocolumn]{extarticle}
+\\usepackage[paperwidth=209.66mm,paperheight=157.25mm,margin=0.8cm,includefoot]{geometry}
 \\usepackage[width=209.66mm,height=157.25mm,center,frame,noinfo]{crop}
 \\begin{document}
 "))
@@ -55,24 +55,73 @@
                              (latex-postamble))))
 
 (defun display-image (image)
-  (let ((*local-framebuffer*
-          (make-array (list *display-height* *display-width*)
-                      :element-type 'bit)))
-    (loop for y from 0 below *display-height*
-          do (loop for x from 0 below *display-width*
-                   do (setf (sbit *local-framebuffer* y x)
-                            (if (> (aref image y x 0) 128) 1 0))))
-    (write-whole-framebuffer)
-    (refresh)))
+  (destructuring-bind (height width channels) (array-dimensions image)
+    (declare (ignore channels))
+    (let ((*local-framebuffer*
+            (make-array (list *display-height* *display-width*)
+                        :element-type 'bit)))
+      (loop for y from 0 below (min *display-height* height)
+            do (loop for x from 0 below (min *display-width* width)
+                     do (setf (sbit *local-framebuffer* y x)
+                              (if (< (aref image y x 0) 240) 1 0))))
+      (write-whole-framebuffer)
+      (refresh))))
 
 (defmacro with-display (&body body)
   `(progn
      (start-display)
      (initialize-blank-display)
      (unwind-protect (progn ,@body)
+       (format t "epap: putting display to sleep~%")
        (goodnight))))
 
 (defun latex-demo ()
   (with-display
     (display-image (latex-png (format t "Hello, world!")))
     (sleep 5)))
+
+(defun real-latex-demo ()
+  (for-real
+    (start-display)
+    (initialize-blank-display)))
+
+(defparameter *chapman-prompt*
+  "Various religions, philosophies, and systems claim to have answers. Some are complicated, and they all seem quite different. When you strip away the details, though, there are only a half dozen fundamental answers. Each is appealing in its own way, but also problematic. Understanding clearly what is right and wrong about each approach can resolve the underlying problem.")
+
+(defun read-from-emacs (prompt)
+  (swank::read-from-minibuffer-in-emacs prompt))
+
+(defmacro display-latex (&body document)
+  `(display-image
+    (latex-png ,@document)))
+
+(defun babble-2 (prompt)
+  (with-display
+    (loop
+      do
+         (display-latex
+           (format t "\\textsl{~a} ~a"
+                   prompt (openai:completions prompt :tokens 200)))
+      until (not (swank:y-or-n-p-in-emacs "Continue?")))))
+
+(defun babble ()
+  (start-display)
+  (initialize-blank-display)
+  (loop with lines = () do
+    (let* ((prompt
+             (swank::read-from-minibuffer-in-emacs "GPT-3: ")))
+      (unless prompt (return))
+      (push (format nil "\\textsc{Prompt.} ~a" prompt) lines)
+      (let ((babble (openai:answer-question prompt 20)))
+        (push (format nil "\\textsc{Answer.} ~a"
+                      (ppcre:regex-replace-all "&" babble "\\\\&")) lines))
+      (display-image
+       (latex-png
+         (loop for line in (reverse lines) do
+           (format t "~a~%~%" line))))
+      (unless (swank:y-or-n-p-in-emacs "Continue?")
+        (return))))
+  (goodnight))
+
+;; (initialize-blank-display)
+

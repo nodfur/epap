@@ -57,7 +57,8 @@
   (let ((response
           (uiop:run-program
            curl-command
-           :output :string)))
+           :output :string
+           :error-output :interactive)))
     ;;(princ curl-command)
     (with-input-from-string
         (s response)
@@ -65,44 +66,66 @@
         ;; extract text (this might change if OpenAI changes JSON return format):
         (cdar (cadr (nth 4 json-as-list)))))))
 
-(defun completions (starter-text max-tokens)
-  (let* ((curl-command
-          (concatenate
-           'string
-           "curl " *openai-davinci-model-host*
-           " -H \"Content-Type: application/json\""
-           " -H \"Authorization: Bearer " (openai-secret-key) "\" "
-           " -d '{\"prompt\": \"" starter-text "\", \"max_tokens\": "
-           (write-to-string max-tokens)  "}'")))
-    (openai-helper curl-command)))
 
-(defun summarize (some-text max-tokens)
-  (let* ((curl-command
-          (concatenate
-           'string
-           "curl " *openai-davinci-model-host*
-           " -H \"Content-Type: application/json\""
-           " -H \"Authorization: Bearer " (openai-secret-key) "\" "
-           " -d '{\"prompt\": \"" some-text "\", \"max_tokens\": "
-           (write-to-string max-tokens) ", \"presence_penalty\": 0.0"
-           ", \"temperature\": 0.3, \"top_p\": 1.0, \"frequency_penalty\": 0.0 }'")))
-    (openai-helper curl-command)))
+(defun openai-curl-command (&rest data)
+  (list "curl" *openai-davinci-model-host*
+        "-H" "Content-Type: application/json"
+        "-H" (format nil "Authorization: Bearer ~a" (openai-secret-key))
+        "-d" (json:encode-json-plist-to-string data)))
 
 (defun answer-question (question-text max-tokens)
   (let* ((q-text
-          (concatenate
-           'string
-           "\nQ: " question-text "\nA:"))
+           (concatenate
+            'string
+            "\nQ: " question-text "\nA:"))
          (curl-command
-          (concatenate
-           'string
-           "curl " *openai-davinci-model-host*
-           " -H \"Content-Type: application/json\""
-           " -H \"Authorization: Bearer " (openai-secret-key) "\" "
-           " -d '{\"prompt\": \"" q-text "\", \"max_tokens\": "
-           (write-to-string max-tokens) ", \"presence_penalty\": 0.0, \"stop\": [\"\\n\"]"
-           ", \"temperature\": 0.0, \"top_p\": 1.0, \"frequency_penalty\": 0.0 }'"))
+           (openai-curl-command
+            :prompt q-text
+            :max_tokens max-tokens
+            :presence_penalty 0.0
+            :stop '("\\n")
+            :temperature 0.0
+            :top_p 1.0
+            :frequency_penalty 0.0))
          (answer (openai-helper curl-command))
+         (index (search "nQ:" answer)))
+    (if index
+        (string-trim " " (subseq answer 0 index))
+        (string-trim " " answer))))
+
+(defun completions (starter-text &key tokens stops)
+  (openai-helper
+   (openai-curl-command
+    :prompt starter-text
+    :max_tokens tokens
+    :temperature 0.6
+    :stop stops)))
+
+(defun summarize (some-text max-tokens)
+  (openai-helper
+   (openai-curl-command
+    :prompt some-text
+    :max_tokens max-tokens
+    :temperature 0.3
+    :top_p 1.0
+    :frequence_penalty 0.0
+    :presence_penalty 0.0)))
+
+(defun answer-question (question-text max-tokens)
+  (let* ((q-text
+           (concatenate
+            'string
+            "\nQ: " question-text "\nA:"))
+         (answer
+           (openai-helper
+            (openai-curl-command
+             :prompt q-text
+                  :max_tokens max-tokens
+                  :presence_penalty 0.0
+                  :stop '("\\n")
+                  :temperature 0.0
+                  :top_p 1.0
+                  :frequency_penalty 0.0)))
          (index (search "nQ:" answer)))
     (if index
         (string-trim " " (subseq answer 0 index))

@@ -1,7 +1,8 @@
-(defpackage :epap-chronicle
-  (:use :common-lisp :spinneret))
+(uiop:define-package :epap-chronicle-base
+  (:use :spinneret :common-lisp :trivia)
+  (:export define-chronicle-category))
 
-(in-package :epap-chronicle)
+(common-lisp:in-package :epap-chronicle-base)
 
 (defparameter *chronicle* '())
 
@@ -14,17 +15,96 @@
            (list 'list (list 'quote ',name) (list 'quote (list ,@args))
                  (list 'quote body)))))
 
-(dolist (category '(
-                    ask
-                    hey
-                    hmm
-                    ugh
-                    umm
-                    wat
-                    yay
-                    did
-                    ))
-  (eval `(define-chronicle-category ,category (id))))
+(defun sexp-html (item)
+  (ematch item
+    ((type number) `(:span :class number ,item))
+    ((type string) `(:span :class string ,(format nil "~s" item)))
+    ((type null) `(:div))
+    ((list (eql 'function) x) `(:div :class function-name ,(sexp-html x)))
+    ((type list) `(:div :class list ,@(mapcar #'sexp-html item)))
+    ((type symbol)
+     (let* ((symbol-name (symbol-name item))
+            (package-name (package-name (symbol-package item)))
+            (external (not (find package-name
+                                 '("KEYWORD" "EPAP-CHRONICLE" "COMMON-LISP")
+                                 :test #'equal))))
+       `(:span :class symbol
+               :data-name ,symbol-name
+               :data-package ,package-name
+               :data-external ,(if external "yes" "no")
+               (:span :class package-name
+                      :data-package ,package-name
+                      ,(if (equal package-name "KEYWORD") "" package-name))
+               (:span :class symbol-name ,symbol-name))))))
+
+(hunchentoot:define-easy-handler (chronicle :uri "/chronicle") ()
+  (with-html-string
+    (:html
+     (:head
+      (:title "EPAP-CHRONICLE")
+      (:style (:raw "
+html { font: 18px \"DM Mono\"; }
+html { color: #222; }
+* { box-sizing: border-box; }
+.list { display: flex; flex-wrap: wrap; align-items: center; }
+.list { border: 1px solid #bbb; padding: .1rem .5rem; }
+.list { margin: .25rem; margin-right: .5rem; }
+.list { border-radius: .25rem; }
+.list { background: #0000ff06; }
+.list { max-width: 40em; }
+[data-name=SHOULD] { color: #a00; }
+[data-name=SHOULD],
+[data-name=HMM],
+[data-name=DATE],
+[data-name=SEE],
+[data-name=TODO],
+[data-name=YAY] { font-weight: bold; }
+{ color: #a00; }
+.symbol { text-transform: lowercase; }
+.symbol, .number, .string { margin-right: .5rem; }
+.string { font-family: helvetica; }
+.function-name { margin-right: .5rem; }
+*:last-child { margin-right: 0; }
+.package-name[data-package=EPAP-CHRONICLE] { display: none; }
+.package-name[data-package=COMMON-LISP] { display: none; }
+.package-name::after { content: ':'; }
+.symbol[data-external=yes] { text-transform: uppercase; }
+
+.symbol[data-external=yes] { opacity: 0.7; }
+         ")))
+     (:body
+      (:main
+       (dolist (item *chronicle*)
+         (:div :style "margin-bottom: .5rem"
+               (let ((spinneret:*suppress-inserted-spaces* t)
+                     (spinneret:*html-style* :tree)
+                     (*print-pretty* nil))
+                 (interpret-html-tree (sexp-html item))))))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(uiop:define-package :epap-chronicle
+  (:use :epap-chronicle-base)
+  (:import-from :common-lisp quote))
+
+(common-lisp:in-package :epap-chronicle)
+
+(common-lisp:defparameter *categories* 
+  '(
+    ask
+    hey
+    hmm
+    ugh
+    umm
+    wat
+    yay
+    did
+    ))
+
+(common-lisp:dolist
+    (category *categories*)
+  (common-lisp:eval
+   `(define-chronicle-category ,category (id))))
 
 (define-chronicle-category todo (id))
 (define-chronicle-category done (id))
@@ -141,79 +221,13 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun sexp-html (item)
-  (trivia:ematch item
-    ((type number) `(:span :class number ,item))
-    ((type string) `(:span :class string ,(format nil "~s" item)))
-    ((type null) `(:div))
-    ((list (eql 'function) x) `(:div :class function-name ,(sexp-html x)))
-    ((type list) `(:div :class list ,@(mapcar #'sexp-html item)))
-    ((type symbol)
-     (let* ((symbol-name (symbol-name item))
-            (package-name (package-name (symbol-package item)))
-            (external (not (find package-name '("KEYWORD" "EPAP-CHRONICLE" "COMMON-LISP") :test #'equal))))
-       `(:span :class symbol
-               :data-name ,symbol-name
-               :data-package ,package-name
-               :data-external ,(if external "yes" "no")
-               (:span :class package-name
-                      :data-package ,package-name
-                      ,(if (equal package-name "KEYWORD") "" package-name))
-               (:span :class symbol-name ,symbol-name))))))
-
-(package-name (symbol-package 'epap::draw-bitmap))
-
-(hunchentoot:define-easy-handler (chronicle :uri "/chronicle") ()
-  (with-html-string
-    (:html
-     (:head
-      (:title "EPAP-CHRONICLE")
-      (:style (:raw "
-html { font: 18px \"DM Mono\"; }
-html { color: #222; }
-* { box-sizing: border-box; }
-.list { display: flex; flex-wrap: wrap; align-items: center; }
-.list { border: 1px solid #bbb; padding: .1rem .5rem; }
-.list { margin: .25rem; margin-right: .5rem; }
-.list { border-radius: .25rem; }
-.list { background: #0000ff06; }
-.list { max-width: 40em; }
-[data-name=SHOULD] { color: #a00; }
-[data-name=SHOULD],
-[data-name=HMM],
-[data-name=DATE],
-[data-name=SEE],
-[data-name=TODO],
-[data-name=YAY] { font-weight: bold; }
-{ color: #a00; }
-.symbol { text-transform: lowercase; }
-.symbol, .number, .string { margin-right: .5rem; }
-.string { font-family: helvetica; }
-.function-name { margin-right: .5rem; }
-*:last-child { margin-right: 0; }
-.package-name[data-package=EPAP-CHRONICLE] { display: none; }
-.package-name[data-package=COMMON-LISP] { display: none; }
-.package-name::after { content: ':'; }
-.symbol[data-external=yes] { text-transform: uppercase; }
-
-.symbol[data-external=yes] { opacity: 0.7; }
-         ")))
-     (:body
-      (:main
-       (dolist (item *chronicle*)
-         (:div :style "margin-bottom: .5rem"
-               (let ((spinneret:*suppress-inserted-spaces* t)
-                     (spinneret:*html-style* :tree)
-                     (*print-pretty* nil))
-                 (interpret-html-tree (sexp-html item))))))))))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (date :saturday 11 :december 2021
   "I'm alone overnight and playing with Lisp.")
 
-(hmm (thinking about "TeX")
-  ((1) well knuth did a good job)
-  ((2) and we can just install it)
-  ((3) then typeset everything))
+;; (hmm (thinking about "TeX")
+;;   ((1) well knuth did a good job)
+;;   ((2) and we can just install it)
+;;   ((3) then typeset everything))
 

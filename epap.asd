@@ -40,5 +40,6 @@
                (:file "07-paragraph")
                (:file "08-browser")
                (:file "09-openai")
+               (:file "10-tex")
                (:file "99-chronicle")
                ))

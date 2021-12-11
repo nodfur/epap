@@ -1,12 +1,3 @@
-(defun start-swank ()
-  (load "slime/swank-loader.lisp")
-  (swank-loader:init)
-  (swank:create-server
-   :interface "0.0.0.0"
-   :port 4005
-   :style :spawn
-   :dont-close t))
-
 (ql:quickload '(:cffi))
 
 (defun pkg-config-add-lib (libname)
@@ -46,6 +37,8 @@
                 :png
                 ))
 
-(asdf:load-system :epap)
+(progn
+  (in-package :cl-user)
+  (asdf:load-system :epap))
 
 (epap::web-app)

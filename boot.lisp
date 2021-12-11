@@ -19,4 +19,6 @@
                 :hunchentoot
                 :iterate
                 :printv
+                :dexador
+                :cl-json
                 ))

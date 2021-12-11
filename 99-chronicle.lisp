@@ -14,8 +14,18 @@
            (list 'list (list 'quote ',name) (list 'quote (list ,@args))
                  (list 'quote body)))))
 
-(define-chronicle-category hmm (id))
-(define-chronicle-category yay (id))
+(dolist (category '(
+                    ask
+                    hey
+                    hmm
+                    ugh
+                    umm
+                    wat
+                    yay
+                    did
+                    ))
+  (eval `(define-chronicle-category ,category (id))))
+
 (define-chronicle-category todo (id))
 (define-chronicle-category done (id))
 (define-chronicle-category code ())
@@ -196,3 +206,16 @@ html { color: #222; }
                      (spinneret:*html-style* :tree)
                      (*print-pretty* nil))
                  (interpret-html-tree (sexp-html item))))))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(date :saturday 11 :december 2021
+  "I'm alone overnight and playing with Lisp.")
+
+(hmm (thinking about "TeX")
+  ((1) well knuth did a good job)
+  ((2) and we can just install it)
+  ((3) then typeset everything))
+
+(hmm (thinking about block id schemes)
+  ())

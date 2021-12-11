@@ -1,15 +1,26 @@
 (defpackage :epap-chronicle
-  (:use :common-lisp))
+  (:use :common-lisp :spinneret))
 
 (in-package :epap-chronicle)
 
-(defmacro hmm (id &body body) nil)
-(defmacro yay (id &body body) nil)
-(defmacro todo (id &body body) nil)
-(defmacro done (id &body body) nil)
-(defmacro code (&body body) nil)
-(defmacro date (weekday day month year) nil)
-(defmacro see (&body resources) nil)
+(defparameter *chronicle* '())
+
+(defun add-to-chronicle (item)
+  (setf *chronicle* (cons item *chronicle*)))
+
+(defmacro define-chronicle-category (name args)
+  `(defmacro ,name (,@args &body body)
+     (list 'add-to-chronicle
+           (list 'list (list 'quote ',name) (list 'quote (list ,@args))
+                 (list 'quote body)))))
+
+(define-chronicle-category hmm (id))
+(define-chronicle-category yay (id))
+(define-chronicle-category todo (id))
+(define-chronicle-category done (id))
+(define-chronicle-category code ())
+(define-chronicle-category date (weekday day month year))
+(define-chronicle-category see ())
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -17,13 +28,13 @@
 
 (yay CHRONICLE-STARTED
   (this is a funny idea)
-  (it's like an issue tracker inside the program)
+  (like an issue tracker inside the program)
   (we can reference symbols)
   (there is a function #'EPAP::DRAW-LETTER))
 
 (todo NEED-CLEAN-SCREEN-RESET
   (now I can only blank the screen in the quick mode)
-  (but this isn't enough to wipe away the e-ink ghosting)
+  (but this does not wipe away the e-ink ghosting)
   (should implement the slow blanking function)
   (should fix #'EPAP::COPY-AREA-TO-FRAMEBUFFER)
   (should fix #'EPAP::DISPLAY-AREA))
@@ -47,19 +58,7 @@
 
 (yay SELF-CHRONICLING-SYSTEM
   (imagine viewing the chronicle itself on the e-ink screen)
-  (this would be a beautiful way to start the day)
-  (epap::with-font :dm-mono 48
-    (epap::live-poetry
-     200 200
-     (cl:with-output-to-string (text)
-       (cl:let ((cl:*print-right-margin* 46))
-         (cl:print '((date :tuesday 7 :december 2021)
-                     (yay CHRONICLE-STARTED
-                       (this is a funny idea)
-                       (like an issue tracker inside the program)
-                       (we can reference symbols
-                           (there is a function #'EPAP::DRAW-LETTER))))
-                   text))))))
+  (this would be a beautiful way to start the day))
 
 (yay VARIABLE-WIDTH-POETRY
   (done LIVE-RENDER-POEM-WITH-SHAPING
@@ -88,9 +87,9 @@
   (code
     (page
      (center
-      (with-font sans 92
+      (with-font :sans 92
         "Words from Cold Mountain")
-      (with-font sans 64
+      (with-font :sans 64
         "Twenty-Seven Poems by Han-Shan"))))
   (todo RESEARCH-LISP-TYPESETTING))
 
@@ -122,3 +121,78 @@
   (now we can run #'EPAP::COLD-MOUNTAIN with #'EPAP::DRY-RUN)
   (now we have #'EPAP::DEFUN-WITH-DRY-RUN)
   (like a primitive object dispatch system))
+
+(hmm BROWSER-INTEGRATION
+  (now we have a super basic web server)
+  (see #'EPAP::WEB-APP)
+  (? but what is it going to do)
+  (maybe it should display the chronicle)
+  (todo CHRONICLE-ON-THE-WEB))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun sexp-html (item)
+  (trivia:ematch item
+    ((type number) `(:span :class number ,item))
+    ((type string) `(:span :class string ,(format nil "~s" item)))
+    ((type null) `(:div))
+    ((list (eql 'function) x) `(:div :class function-name ,(sexp-html x)))
+    ((type list) `(:div :class list ,@(mapcar #'sexp-html item)))
+    ((type symbol)
+     (let* ((symbol-name (symbol-name item))
+            (package-name (package-name (symbol-package item)))
+            (external (not (find package-name '("KEYWORD" "EPAP-CHRONICLE" "COMMON-LISP") :test #'equal))))
+       `(:span :class symbol
+               :data-name ,symbol-name
+               :data-package ,package-name
+               :data-external ,(if external "yes" "no")
+               (:span :class package-name
+                      :data-package ,package-name
+                      ,(if (equal package-name "KEYWORD") "" package-name))
+               (:span :class symbol-name ,symbol-name))))))
+
+(package-name (symbol-package 'epap::draw-bitmap))
+
+(hunchentoot:define-easy-handler (chronicle :uri "/chronicle") ()
+  (with-html-string
+    (:html
+     (:head
+      (:title "EPAP-CHRONICLE")
+      (:style (:raw "
+html { font: 18px \"DM Mono\"; }
+html { color: #222; }
+* { box-sizing: border-box; }
+.list { display: flex; flex-wrap: wrap; align-items: center; }
+.list { border: 1px solid #bbb; padding: .1rem .5rem; }
+.list { margin: .25rem; margin-right: .5rem; }
+.list { border-radius: .25rem; }
+.list { background: #0000ff06; }
+.list { max-width: 40em; }
+[data-name=SHOULD] { color: #a00; }
+[data-name=SHOULD],
+[data-name=HMM],
+[data-name=DATE],
+[data-name=SEE],
+[data-name=TODO],
+[data-name=YAY] { font-weight: bold; }
+{ color: #a00; }
+.symbol { text-transform: lowercase; }
+.symbol, .number, .string { margin-right: .5rem; }
+.string { font-family: helvetica; }
+.function-name { margin-right: .5rem; }
+*:last-child { margin-right: 0; }
+.package-name[data-package=EPAP-CHRONICLE] { display: none; }
+.package-name[data-package=COMMON-LISP] { display: none; }
+.package-name::after { content: ':'; }
+.symbol[data-external=yes] { text-transform: uppercase; }
+
+.symbol[data-external=yes] { opacity: 0.7; }
+         ")))
+     (:body
+      (:main
+       (dolist (item *chronicle*)
+         (:div :style "margin-bottom: .5rem"
+               (let ((spinneret:*suppress-inserted-spaces* t)
+                     (spinneret:*html-style* :tree)
+                     (*print-pretty* nil))
+                 (interpret-html-tree (sexp-html item))))))))))

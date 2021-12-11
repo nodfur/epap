@@ -19,16 +19,17 @@
 (in-package :epap)
 
 (defun web-app () 
-  (hunchentoot:start (make-instance 'hunchentoot:easy-acceptor :port 4242))
+  (hunchentoot:start (make-instance 'hunchentoot:easy-acceptor :port 4242)))
 
-  (hunchentoot:define-easy-handler (epap :uri "/epap") ()
-    (with-html-string
-      (:html
-       (:head (:title "EPAP"))
-       (:body
-        (let* ((*display-width* 1872)
-               (*display-height* 1404)
-               (*local-framebuffer* (make-array (list *display-height* *display-width*)
-                                                :element-type 'bit)))
-          )
-        (:img :src (format nil "data:image/png;base64,~S" "")))))))
+(hunchentoot:define-easy-handler (epap :uri "/epap") ()
+  (with-html-string
+    (:html
+     (:head (:title "EPAP"))
+     (:body
+      (let* ((*display-width* 1872)
+             (*display-height* 1404)
+             (*local-framebuffer* (make-array (list *display-height* *display-width*)
+                                              :element-type 'bit)))
+        )
+      (:img :src (format nil "data:image/png;base64,~S" ""))))))
+  

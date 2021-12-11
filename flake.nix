@@ -19,5 +19,7 @@
 
       packages.aarch64-darwin.epap-sbcl = epap-sbcl "aarch64-darwin";
       packages.aarch64-linux.epap-sbcl = epap-sbcl "aarch64-darwin";
+
+      devShell.x86_64-linux = epap "x86_64-linux";
     };
 }

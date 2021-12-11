@@ -1,4 +1,14 @@
-{ stdenv, pkg-config, zig, libcap, sbcl, lispPackages }:
+{
+  stdenv,
+  pkg-config,
+  openssl,
+
+  zig,        # for building C/C++ and low-level functions
+  libcap,     # for manipulating Linux capabilities
+  sbcl,       # Steel Bank Common Lisp
+  texlive,    # for TeX, LaTeX, XeTeX, etc
+  imagemagick # for resizing images, etc
+}:
 
 stdenv.mkDerivation {
   name = "epap";
@@ -9,14 +19,9 @@ stdenv.mkDerivation {
     zig
     libcap
     sbcl
-    lispPackages.cffi
-    lispPackages.alexandria
-    lispPackages.trivial-features
-    lispPackages.babel
-    lispPackages.zpng
-    lispPackages.cl-base64
-    lispPackages.trivia
-    lispPackages.clwrapper
+    openssl
+    texlive.combined.scheme-medium
+    imagemagick
   ];
   preBuild = ''
     export HOME=$TMPDIR

@@ -39,5 +39,6 @@
                (:file "06-poetry")
                (:file "07-paragraph")
                (:file "08-browser")
-               ;(:file "99-chronicle")
+               (:file "09-openai")
+               (:file "99-chronicle")
                ))

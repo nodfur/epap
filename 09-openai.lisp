@@ -27,9 +27,11 @@
 ;;; particular file as GPL3.
 ;;;
 
-(defpackage :openai
+(uiop:define-package :openai
   (:use :common-lisp)
-  (:export ()))
+  (:export completions
+           summarize
+           answer-question))
 
 (in-package #:openai)
 
@@ -44,7 +46,8 @@
                  :interactive (lambda ()
                                 (format t "New value for ~A: " x)
                                 (let ((new-value (eval (read))))
-                                  (setf (uiop:getenv x) new-value)))
+                                  (setf (uiop:getenv x) new-value)
+                                  (list new-value)))
                   value)))))
 
 (defun openai-secret-key ()

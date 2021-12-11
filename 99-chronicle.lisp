@@ -217,5 +217,3 @@ html { color: #222; }
   ((2) and we can just install it)
   ((3) then typeset everything))
 
-(hmm (thinking about block id schemes)
-  ())

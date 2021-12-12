@@ -5,6 +5,9 @@
     nodfur.url = github:nodfur/os;
   };
 
+  nixConfig.bash-prompt =
+    ''(epap) \[\e[1m\]\h\[\e[0m\]:\w\[\e[1m\]\[\e[0m\]\$ '';
+
   outputs = { self, nixpkgs, flake-utils, nodfur }:
     flake-utils.lib.eachDefaultSystem (system:
       let

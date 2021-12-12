@@ -22,8 +22,11 @@
 
 (in-package :epap)
 
-(define-foreign-library epapi
-  (:unix (:or "./zig/zig-out/lib/libepapi.so"
-              "./zig/zig-out/lib/libepapi-text.dylib")))
+(define-foreign-library freetype2
+  (:unix (:or "libfreetype.so" "libfreetype.dylib")))
 
-(use-foreign-library epapi)
+(define-foreign-library harfbuzz
+  (:unix (:or "libharfbuzz.so" "libharfbuzz.dylib")))
+
+(use-foreign-library freetype2)
+(use-foreign-library harfbuzz)

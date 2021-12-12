@@ -22,29 +22,34 @@
 
 (pkg-config-library "libcrypto")
 (pkg-config-library "libpng")
-(pkg-config-library "libfreetype")
-(pkg-config-library "libharfbuzz")
+(pkg-config-library "freetype2")
+(pkg-config-library "harfbuzz")
 
-(ql:quickload '(:trivia
-                :babel
-                :cffi
-                :zpng
-                :cl-base64
-                :cl-ppcre
-                :trivia
-                :parenscript
-                :spinneret
-                :css-lite
-                :hunchentoot
-                :iterate
-                :printv
-                :dexador
-                :cl-json
-                :png
-                ))
+(ql:quickload
+ '(
+   #:iterate          ; a looping macro
+   #:trivia           ; pattern matching
+   #:printv           ; easy code tracing
+
+   #:babel            ; character codec
+   #:cffi             ; C library interface
+
+   #:cl-base64        ; base 64 codec
+   #:cl-json          ; JSON codec
+   #:cl-ppcre         ; Perl-compatible regexps
+
+   #:dexador          ; HTTP client
+   #:hunchentoot      ; HTTP server
+   #:spinneret        ; HTML with S-expressions
+   #:css-lite         ; CSS with S-expressions
+   #:parenscript      ; JavaScript with Lisp syntax
+
+   #:png              ; read & write PNG files
+   #:zpng             ; Lisp-native PNG library
+   ))
 
 (progn
   (in-package :cl-user)
-  (asdf:load-system :epap))
+  (asdf:load-system "epap"))
 
 (epap::web-app)

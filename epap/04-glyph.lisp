@@ -21,9 +21,9 @@
 (defvar *current-font*)
 
 (defparameter *font-table*
-  '(:cozette "./fonts/cozette.bdf"
-    :dm-mono "./fonts/DMMono-Regular.ttf"
-    :concrete-roman "./fonts/computer-modern/cmunorm.otf"))
+  '(:cozette "fonts/cozette.bdf"
+    :dm-mono "fonts/DMMono-Regular.ttf"
+    :concrete-roman "fonts/computer-modern/cmunorm.otf"))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

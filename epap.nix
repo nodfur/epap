@@ -32,8 +32,8 @@ let
     export PATH=$(pwd)/bin:$PATH
 
     echo
-    echo "This is the shell environment for epap."
-    echo "Use \`epap-emacs' to start an Emacs session."
+    echo ";;; This is the shell environment for epap."
+    echo ";;; Use \`epap-emacs' to start an Emacs session."
     echo
   '';
 

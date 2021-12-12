@@ -1,4 +1,4 @@
 #!/bin/sh
+echo ";; Starting the EPAP environment..."
 set -ex
-echo ";;; Launching the EPAP Emacs environment..."
-nix develop -c ./bin/epap-emacs
+nix develop -c epap-shell

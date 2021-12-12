@@ -1,0 +1,2 @@
+#!/bin/sh
+exec nodfur-emacs boot.lisp --execute "(slime)"

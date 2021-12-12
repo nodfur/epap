@@ -103,7 +103,7 @@
 (defmacro save-latex (path &body document)
   `(save-image ,path (latex-png ,@document)))
 
-(save-latex "alexander.png"
+(save-latex "tmp/alexander.png"
   (format t "
 \\section{The Family}
 

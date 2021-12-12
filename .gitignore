@@ -1,7 +1,6 @@
-zig-out
-zig-cache
+**/.#*
 .DS_Store
 .vscode
-frame.pbm
-frame.png
-slime
+tmp/*.*
+**/zig-out
+**/zig-cache

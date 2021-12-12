@@ -153,7 +153,7 @@
              (display-area-monochrome (* i 33) y 33 64)
              (incf i))))))
 
-;; (change-font :dm-mono 64)
+(change-font :dm-mono 64)
 
 (defparameter *live-update* nil)
 

@@ -16,11 +16,17 @@
 ;; <http://www.gnu.org/licenses/>.
 ;;
 
-(uiop:define-package :epap
-  (:use :common-lisp :cffi :babel :zpng :base64 :cl-ppcre
-        :spinneret))
+(uiop:define-package #:epap
+  (:use #:common-lisp
+        #:cffi
+        #:babel
+        #:zpng
+        #:base64
+        #:cl-ppcre
+        #:spinneret))
 
 (in-package :epap)
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Basic testing framework

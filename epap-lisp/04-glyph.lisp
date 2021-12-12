@@ -257,6 +257,7 @@
     (error 'freetype-error :code result)))
 
 (defun initialize-freetype ()
+  (format t "; Initializing FreeType~%")
   (let ((freetype (foreign-alloc :pointer)))
     (check-freetype-result
      (ft-init-freetype freetype))
@@ -267,11 +268,14 @@
   freetype-ptr
   harfbuzz-ptr)
 
-(defvar *freetype* (initialize-freetype))
+(defvar *freetype*
+  (initialize-freetype))
 
 ;; (setf *freetype* (initialize-freetype))
 
 (defun load-freetype-font (path height)
+  (printv:printv
+   *freetype* path height)
   (let ((face-ptr (foreign-alloc :pointer)))
     (check-freetype-result
      (ft-new-face *freetype* path 0 face-ptr))
@@ -281,6 +285,7 @@
          (ft-set-pixel-sizes face 0 height))))))
 
 (defun load-font (path height)
+  (format t "; loading font ~A at ~Apx~%" path height)
   (let* ((freetype-ptr (load-freetype-font path height))
          (harfbuzz-ptr (hb-ft-font-create-referenced freetype-ptr)))
     (hb-ft-font-set-funcs harfbuzz-ptr)

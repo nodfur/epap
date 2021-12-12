@@ -1,3 +1,19 @@
+(load
+ (uiop:run-program
+  (format nil "find ~a -name swank-loader.lisp"
+          (uiop:getenv "EMACS_SITE_LISP"))
+  :output '(:string :stripped t)
+  :error-output :interactive))
+
+(swank-loader:init)
+
+(defun start-swank ()
+  (swank:create-server
+   :interface "0.0.0.0"
+   :port 4005
+   :style :spawn
+   :dont-close t))
+
 (ql:quickload '(:cffi :cffi-toolchain :cl-ppcre))
 
 (defun run-pkg-config (name command)
@@ -48,8 +64,10 @@
    #:zpng             ; Lisp-native PNG library
    ))
 
+(format t "Loading EPAP...~%")
+
 (progn
   (in-package :cl-user)
-  (asdf:load-system "epap"))
+  (asdf:make "epap"))
 
 (epap::web-app)

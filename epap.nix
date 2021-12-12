@@ -5,6 +5,7 @@
 
   pkg-config,
   openssl,
+  libpng,
 
   bashInteractive,
   coreutils,
@@ -22,19 +23,8 @@
 }:
 
 let
-  bashrc = writeText "epap-bashrc" ''
-    if [ "$TERM" != "dumb" -o -n "$INSIDE_EMACS" ]; then
-      PS1=$'\e[93m\]epap\e[0m\] \[\e[1m\]\h\[\e[0m\]:\w\[\e[1m\]`eval "$PS1GIT"`\[\e[0m\]\$ '
-      PS1GIT='[[ `git status --short 2>/dev/null` ]] && echo \*'
-      [[ $TERM = xterm* ]] && PS1='\[\033]2;\h:\w\007\]'"$PS1"
-    fi
-
-    export PATH=$(pwd)/bin:$PATH
-
-    echo
-    echo ";;; This is the shell environment for epap."
-    echo ";;; Use \`epap-emacs' to start an Emacs session."
-    echo
+  epap-emacs = writeShellScriptBin "epap-emacs" ''
+    exec ${nodfur-emacs}/bin/nodfur-emacs boot.lisp --execute "(slime)" "$@"
   '';
 
 in stdenv.mkDerivation {
@@ -48,17 +38,18 @@ in stdenv.mkDerivation {
 
     sbcl
     texlive.combined.scheme-full
+
     restless-git
     nodfur-emacs
+    epap-emacs
 
     pkg-config
     openssl
+    libpng
+
     # freetype
     # harfbuzz
 
-    (writeShellScriptBin "epap-shell" ''
-      exec ${bashInteractive}/bin/bash --rcfile ${bashrc}
-    '')
   ];
 
   EMACS_SITE_LISP = "${nodfur-emacs-packages.slime}/share/emacs/site-lisp";

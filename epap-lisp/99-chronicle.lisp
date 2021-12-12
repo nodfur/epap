@@ -11,6 +11,7 @@
 
 (defmacro define-chronicle-category (name args)
   `(defmacro ,name (,@args &body body)
+     (defparameter ,name nil)
      (list 'add-to-chronicle
            (list 'list (list 'quote ',name) (list 'quote (list ,@args))
                  (list 'quote body)))))

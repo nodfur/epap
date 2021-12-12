@@ -105,7 +105,7 @@
 
 (save-latex "tmp/alexander.png"
   (format t "
-\\section{The Family}
+\\section*{The Family}
 
 \\textbf{The nuclear family is not by itself a viable social form.}
 

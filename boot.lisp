@@ -38,30 +38,31 @@
 
 (pkg-config-library "libcrypto")
 (pkg-config-library "libpng")
-(pkg-config-library "freetype2")
-(pkg-config-library "harfbuzz")
+
+;; (pkg-config-library "freetype2")
+;; (pkg-config-library "harfbuzz")
 
 (ql:quickload
  '(
-   #:iterate          ; a looping macro
-   #:trivia           ; pattern matching
-   #:printv           ; easy code tracing
+   #:iterate                            ; a looping macro
+   #:trivia                             ; pattern matching
+   #:printv                             ; easy code tracing
 
-   #:babel            ; character codec
-   #:cffi             ; C library interface
+   #:babel                              ; character codec
+   #:cffi                               ; C library interface
 
-   #:cl-base64        ; base 64 codec
-   #:cl-json          ; JSON codec
-   #:cl-ppcre         ; Perl-compatible regexps
+   #:cl-base64                          ; base 64 codec
+   #:cl-json                            ; JSON codec
+   #:cl-ppcre                           ; Perl-compatible regexps
 
-   #:dexador          ; HTTP client
-   #:hunchentoot      ; HTTP server
-   #:spinneret        ; HTML with S-expressions
-   #:css-lite         ; CSS with S-expressions
-   #:parenscript      ; JavaScript with Lisp syntax
+   #:dexador                            ; HTTP client
+   #:hunchentoot                        ; HTTP server
+   #:spinneret                          ; HTML with S-expressions
+   #:css-lite                           ; CSS with S-expressions
+   #:parenscript                        ; JavaScript with Lisp syntax
 
-   #:png              ; read & write PNG files
-   #:zpng             ; Lisp-native PNG library
+   #:png                                ; read & write PNG files
+   #:zpng                               ; Lisp-native PNG library
    ))
 
 (format t "Loading EPAP...~%")

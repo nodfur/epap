@@ -22,6 +22,8 @@
 
 (pkg-config-library "libcrypto")
 (pkg-config-library "libpng")
+(pkg-config-library "libfreetype")
+(pkg-config-library "libharfbuzz")
 
 (ql:quickload '(:trivia
                 :babel

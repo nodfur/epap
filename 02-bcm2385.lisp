@@ -1,7 +1,7 @@
 ;;
-;; Bindings to Mike McCauley's BCM2385 library for Raspberry Pi GPIO/SPI,
-;; which is a submodule in vendor/bcm2385-1.70 and compiled with `make`
-;; into a shared library which this file loads.
+;; Bindings to Mike McCauley's BCM2385 library for Raspberry Pi
+;; GPIO/SPI, which is a submodule in vendor/bcm2385-1.70 and compiled
+;; with `make` into a shared library which this file loads.
 ;;
 ;; Copyright (C) 2021  Restless Hypermedia, Inc.
 ;;

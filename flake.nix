@@ -9,12 +9,7 @@
       let
         pkgs = import nixpkgs { inherit system; };
       in rec {
-        packages.epap =
-          pkgs.callPackage ./epap.nix {
-            zig = if system == "aarch64-darwin"
-                  then null else pkgs.zig;
-          };
-        
+        packages.epap = pkgs.callPackage ./epap.nix {};
         devShell = packages.epap;
       }
     );

@@ -4,23 +4,16 @@ pub fn build(b: *std.build.Builder) void {
     const target = b.standardTargetOptions(.{});
     const mode = b.standardReleaseOptions();
 
-    const exec = b.addExecutable("exec", null);
-    exec.setTarget(target);
-    exec.setBuildMode(mode);
-    exec.linkSystemLibrary("c");
-    exec.addCSourceFile("exec.c", &.{});
-    exec.install();
-
     const text = b.addSharedLibrary("epapi-text", null, .unversioned);
     text.setTarget(target);
     text.setBuildMode(mode);
     text.linkSystemLibrary("c");
     text.linkSystemLibrary("c++");
     text.addIncludeDir(".");
-    text.addIncludeDir("vendor/bcm2835-1.70/src");
-    text.addIncludeDir("vendor/freetype/include");
-    text.addIncludeDir("vendor/freetype/src");
-    text.addIncludeDir("vendor/harfbuzz/src");
+    text.addIncludeDir("../vendor/bcm2835-1.70/src");
+    text.addIncludeDir("../vendor/freetype/include");
+    text.addIncludeDir("../vendor/freetype/src");
+    text.addIncludeDir("../vendor/harfbuzz/src");
 
     text.addCSourceFile(
         "freetype.c",
@@ -28,7 +21,7 @@ pub fn build(b: *std.build.Builder) void {
     );
 
     text.addCSourceFile(
-        "vendor/harfbuzz/src/harfbuzz.cc",
+        "../vendor/harfbuzz/src/harfbuzz.cc",
         &.{ "-DHAVE_FREETYPE", "-fno-sanitize=undefined" },
     );
 
@@ -38,18 +31,21 @@ pub fn build(b: *std.build.Builder) void {
     epapi.setBuildMode(mode);
     epapi.linkSystemLibrary("c");
     epapi.linkSystemLibrary("c++");
-    epapi.linkSystemLibrary("cap");
+
     epapi.linkLibrary(text);
 
     epapi.addIncludeDir(".");
-    epapi.addIncludeDir("vendor/bcm2835-1.70/src");
-    epapi.addIncludeDir("vendor/freetype/include");
-    epapi.addIncludeDir("vendor/harfbuzz/src");
+    epapi.addIncludeDir("../vendor/bcm2835-1.70/src");
+    epapi.addIncludeDir("../vendor/freetype/include");
+    epapi.addIncludeDir("../vendor/harfbuzz/src");
 
-    epapi.addCSourceFile(
-        "vendor/bcm2835-1.70/src/bcm2835.c",
-        &.{ "-fno-sanitize=undefined", "-DBCM2835_HAVE_LIBCAP" },
-    );
+    if (target.isLinux()) {
+        epapi.linkSystemLibrary("cap");
+        epapi.addCSourceFile(
+            "../vendor/bcm2835-1.70/src/bcm2835.c",
+            &.{ "-fno-sanitize=undefined", "-DBCM2835_HAVE_LIBCAP" },
+        );
+    }
 
     text.install();
     epapi.install();

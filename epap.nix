@@ -3,10 +3,10 @@
   pkg-config,
   openssl,
 
-  zig,        # for building C/C++ and low-level functions
   sbcl,       # Steel Bank Common Lisp
-  texlive,    # for TeX, LaTeX, XeTeX, etc
-  imagemagick # for resizing images, etc
+  texlive,    # TeX, LaTeX, XeTeX, etc
+  freetype,   # for loading and rendering fonts
+  harfbuzz    # for shaping text words
 }:
 
 stdenv.mkDerivation {
@@ -18,12 +18,13 @@ stdenv.mkDerivation {
     sbcl
     openssl
     texlive.combined.scheme-full
-    imagemagick
-  ] ++ (if zig == null then [] else [zig]);
+    freetype
+    harfbuzz
+  ];
   preBuild = ''
     export HOME=$TMPDIR
   '';
   installPhase = ''
-    zig build --prefix $out install
+    # zig build --prefix $out install
   '';
 }

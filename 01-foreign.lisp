@@ -1,5 +1,5 @@
 ;;
-;; Load foreign symbols from FreeType, Harfbuzz, libcap, etc.
+;; Load foreign symbols from FreeType, Harfbuzz, etc.
 ;;
 ;; They're all built into one shared library file using Zig.
 ;;
@@ -23,7 +23,7 @@
 (in-package :epap)
 
 (define-foreign-library epapi
-  (:unix (:or "./zig-out/lib/libepapi.so"
-              "./zig-out/lib/libepapi-text.dylib")))
+  (:unix (:or "./zig/zig-out/lib/libepapi.so"
+              "./zig/zig-out/lib/libepapi-text.dylib")))
 
 (use-foreign-library epapi)

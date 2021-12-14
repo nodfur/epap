@@ -5,7 +5,8 @@
 ;;;
 ;;; From Watson's repository README:
 ;;;
-;;; > This repo is for the 6th edition of my book that was released May 30, 2020
+;;; > This repo is for the 6th edition of my book that was released
+;;; > May 30, 2020
 ;;; >
 ;;; > Open source examples for my book "Loving Common Lisp, or the
 ;;; > Savvy Programmer's Secret Weapon" that is available at
@@ -35,8 +36,14 @@
 
 (in-package #:openai)
 
-(defparameter *openai-davinci-model-host*
-  "https://api.openai.com/v1/engines/davinci/completions")
+(defparameter *openai-api-base*
+  "https://api.openai.com/v1/engines")
+
+(defparameter *openai-model*
+  :davinci)
+
+(defun openai-request-url ()
+  (format nil "~a/~(~a~)/completions" *openai-api-base* *openai-model*))
 
 (defun friendly-getenv (x)
   (let ((value (uiop:getenv x)))
@@ -59,16 +66,14 @@
            curl-command
            :output :string
            :error-output :interactive)))
-    ;;(princ curl-command)
     (with-input-from-string
         (s response)
       (let* ((json-as-list (json:decode-json s)))
         ;; extract text (this might change if OpenAI changes JSON return format):
         (cdar (cadr (nth 4 json-as-list)))))))
 
-
 (defun openai-curl-command (&rest data)
-  (list "curl" *openai-davinci-model-host*
+  (list "curl" (openai-request-url)
         "-H" "Content-Type: application/json"
         "-H" (format nil "Authorization: Bearer ~a" (openai-secret-key))
         "-d" (json:encode-json-plist-to-string data)))
@@ -93,13 +98,23 @@
         (string-trim " " (subseq answer 0 index))
         (string-trim " " answer))))
 
-(defun completions (starter-text &key tokens stops)
-  (openai-helper
-   (openai-curl-command
-    :prompt starter-text
-    :max_tokens tokens
-    :temperature 0.6
-    :stop stops)))
+(defun completions (&key
+                      prompt
+                      (model :davinci)
+                      (temperature 0.6)
+                      max-tokens
+                      stops
+                      include-prompt
+                      )
+  (let ((*openai-model* model))
+    (format nil "~a~a"
+            (if include-prompt prompt "")
+            (openai-helper
+             (openai-curl-command
+              :prompt prompt
+              :max_tokens max-tokens
+              :temperature temperature
+              :stop stops)))))
 
 (defun summarize (some-text max-tokens)
   (openai-helper
@@ -110,3 +125,7 @@
     :top_p 1.0
     :frequence_penalty 0.0
     :presence_penalty 0.0)))
+
+(defmacro with-codex (&body body)
+  `(let ((*openai-model* :davinci-codex))
+     ,@body))

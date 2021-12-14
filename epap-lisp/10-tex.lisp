@@ -19,10 +19,15 @@
 (in-package :epap)
 
 (defun latex-preamble ()
-  (format t "\\documentclass[10pt,twocolumn]{extarticle}
-\\usepackage[paperwidth=209.66mm,paperheight=157.25mm,margin=0.8cm,includefoot]{geometry}
-\\usepackage[width=209.66mm,height=157.25mm,center,frame,noinfo]{crop}
+  (format t "
+\\documentclass[10pt,twocolumn]{extarticle}
+\\usepackage[
+  paperwidth=209.66mm,paperheight=157.25mm,
+  margin=0.8cm,includefoot]{geometry}
+\\usepackage[
+  width=209.66mm,height=157.25mm,center,frame,noinfo]{crop}
 \\usepackage{ebgaramond}
+\\usepackage[sc]{titlesec}
 \\begin{document}
 "))
 
@@ -105,7 +110,7 @@
 
 (save-latex "tmp/alexander.png"
   (format t "
-\\section*{The Family}
+\\section*{the family}
 
 \\textbf{The nuclear family is not by itself a viable social form.}
 

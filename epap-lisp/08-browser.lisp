@@ -54,7 +54,9 @@
 (expose-function epap::initialize-blank-display)
 (expose-function epap::enter-sleep-mode)
 
+(setf *catch-errors-p* nil)
+
 (defun display-image ()
-  (epap::display-image (png:decode (raw-post-data))))
+  (epap::display-image (png:decode (raw-post-data :want-stream t))))
 
 (expose-function display-image)

@@ -309,3 +309,76 @@ Stallī bērus kumeliņus")
   (enter-sleep-mode))
 
 ; (goodnight)
+
+(defparameter *meekaale-aquinas*
+  '("I would like to write something about how I’ve found God to be a very interesting and useful entity to relate to but it’s kind of weird. It started with a book recommended to me about a new metaphor for understanding Aquinas’s modification of Aristotelian virtue ethics."
+
+"The metaphor is based on the concept “joint attention” from social cognition research which is like the main thing that autistic children won’t do with their parents, the meeting of minds that comes from playing together, looking together at something."
+
+"As a parent I had never thought much about this phenomenon but immediately when I read about it, I realized how important it is, and I started paying attention to this daily thing of “seeing together” with my toddler son."
+
+"It’s also present in friend relationships and when working together, but with two adults it’s sometimes a bit less clear, because you’re both so individuated, it can be kind of rare to really “meet” in this attuned way."
+
+"But there’s such a fascinating type of transmission that happens in the parent–child relationship when this joint attention is active; it’s like I’m lending my mind, my gaze, my perspective to the child."
+
+"So I don’t just teach the child by instruction and imitation but also we meet up in this joint space where our own individual minds merge within a common realm, we’re not necessarily talking, we’re fusing our phenomenologies to some extent."
+
+"And as the parent I am responsible for bringing something to this joint attention space, which the child isn’t yet capable of. I feel like I must enact qualities like stability of attention, and I help guide our mutual gaze, steadying it, somehow correcting it when necessary."
+
+"Like I can physically hold the child in my arms, or hold his hand as he walks on an icy road, but there’s also this kind of gentle holding in the joint attention, which happens through subtler attunements."
+
+"And so I can also imagine what it’s like for a child to have the presence of a safe caretaker not only in terms of handholding but also as this subtler guiding presence in the whole arena of attention and perception."
+
+"Of course the point with Aquinas is that adult humans can have an analogous relation with the guiding parental presence they call God or Christ."
+
+"I’m especially interested in this because I was basically researching the phenomenology of ADHD and how such attentional disorders could be thought of from a virtue ethical perspective given that they seem to disrupt basic virtuous capacities."
+
+"First I looked into the general literature about virtue ethics and disability and I shouldn’t have been surprised to find that the dominant strand in that weave is exactly the Christian inversion of the surrounding Greco-Roman ethics of strength and excellence."
+
+"That was fascinating in itself because I thought virtue ethics and disability was a rather obscure intersection of interests but then I realize it’s actually at the center of the whole story of Christianity."
+
+"Aristotelian virtue ethical teaching starts with the assumption of a healthy & well-raised property-owning male free citizen of the Athenian polis, and provides him with a framework for understanding and further developing his practical skills and virtuous friendships."
+
+"Sick and disabled people, along with women and slaves, are more or less scoped out of relevance to this style of training in excellence. Jesus comes along and specifically preaches God’s love for the sick & disabled, for women & slaves."
+
+"The Christians proclaim a gospel where the most important kind of happiness, and indeed salvation, doesn’t depend upon the virtues glorified by the Greco-Roman culture; it’s universal in the sense that its fruits aren’t contingent on bodily strength or virtuous excellence."
+
+"Now Aquinas is the pinnacle of the synthesis of Aristotelian philosophy and Christian theology, so it’s really interesting to see how he brings these seemingly radically different perspectives together."
+
+"But it seems that clear intuitive understanding of the Aquinas system is not easy to find. MacIntyre wrote “After Virtue” before he became a Thomist and that book doesn’t really explain Aquinas, rather it is vaguely skeptical towards him."
+
+"Mostly the explanations seem rather dry and weird. He changes the definition of virtue a bit, and then adds a whole new set of different virtues, and it all just seems pretty confusing and epicyclical, a bunch of religious metaphysical nonsense strapped onto a pagan virtue ethics."
+
+"So in 2012 Andrew Pinsent publishes this book called “The Second-Person Perspective in Aquinas’s Ethics: Virtues and Gifts” which laments this lack of intuitive explanation and proposes joint attention as a fundamental image to illuminate and make sense of the whole scheme."
+
+"Pinsent tells a story at the end of the book of how his initial idea came after seeing a parent and a daughter playing, and having a sense that he could see almost in real time how the daughter was growing as a person through this “infusion” of attention provided by the parent."
+
+"He then thought about how Aristotle didn’t have much concrete to say about a situation like this which is so different from the self-reliant habituation that grows the Aristotelian virtues like muscles grown in a gymnasium."
+
+"Aquinas, having subsumed Aristotle under the Christian theology, is able to discuss the habitual trained virtues alongside other qualities which are transmitted in a different way, with an immediacy that seems mysterious from a “pagan” perspective."
+
+"So there’s another kind of channel for acquiring good qualities, different from the worldly virtues of athletics or architecture, and this channel is open right away even for infants."
+
+"So the “gifts” in Aquinas’s system are qualities that emerge from being in a state of joint attention with God, where I can address God in the second person as “you” because he is felt as a presence within my field of experience, not as an object but as a cooperative subject."
+
+"For me this was all revelatory as to why Christians would insist God is a person with whom one can have a personal relationship, and why the previously strange-seeming practice of praying to a “father” or a “lord” who doesn’t appear in the world."
+
+"It provided an exceedingly clear psychological explanation for the power of such a relationship, regardless of the ontological status of God himself and regardless of the historical status of Jesus performing miracles and being resurrected."
+
+"So in my secular frame it quite suddenly made a lot of sober sense to just start trying to see what happens if I invite God into joint attention with my own perception."
+
+"That didn’t mean I have to try to reach God to see him or hear his voice; I only had to kind of shift my mindset into one where I assume I might not be alone within my own gaze at the world."
+
+"So I hypothesize that I am a child, my attention wavering and unwise, but that just outside my field of vision there is a “heavenly father” whose wisdom and stability I can only vaguely surmise—and I let this being see with me, I try to see together with him."
+
+"Now is it possible for me to make any use of a heavenly wisdom that I don’t actually possess? Well, that almost seems like an experimental question. And my feeling is that God, taken as a hypothetical source of wise attunement, in fact is somehow present within me."
+
+"I can feel this while making no supernatural claim, because it’s still compatible with an explanation like “this God is just a projected intuitive perfection of a wise inclination that my mind has just by virtue of innate evolved intelligence”."
+
+"Even so, it feels like a discovery that such a projection can be efficacious and inspiring when I put it to work as a parental figure in joint attention with me, putting myself in the posture of a playing child guided by the wisdom of an innate parental conscience."
+
+"Pinsent proposes that this Aquinian way of understanding faith can illuminate secular interactions, such as between parent and child. Of course I have no ambition to be like a God for my child—but I have to play the role of father in our joint attentional relationship."
+
+"For some time now I have been praying on a regular basis, meaning I take some time to address God as “you” while attending to the circumstances of life, as a kind of meditation that charges the mental atmosphere with wisdom and glory."
+
+"And it feels like a remarkably potent, fascinating, beautiful, and intuitive psychotechnology, entirely aside from what I might believe about the ancient hallucinations of the Israelite prophets and whatnot."))

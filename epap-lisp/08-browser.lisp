@@ -16,20 +16,45 @@
 ;; <http://www.gnu.org/licenses/>.
 ;;
 
-(in-package :epap)
+(uiop:define-package #:epap-web
+  (:use #:common-lisp #:hunchentoot #:spinneret))
+
+(in-package #:epap-web)
 
 (defun web-app () 
-  (hunchentoot:start (make-instance 'hunchentoot:easy-acceptor :port 4242)))
+  (start (make-instance 'easy-acceptor :port 4242)))
 
-(hunchentoot:define-easy-handler (epap :uri "/epap") ()
+(define-easy-handler (epap :uri "/epap") ()
   (with-html-string
     (:html
      (:head (:title "EPAP"))
      (:body
-      (let* ((*display-width* 1872)
-             (*display-height* 1404)
-             (*local-framebuffer* (make-array (list *display-height* *display-width*)
-                                              :element-type 'bit)))
+      (let* ((epap::*display-width* 1872)
+             (epap::*display-height* 1404)
+             (epap::*local-framebuffer*
+               (make-array (list epap::*display-height*
+                                 epap::*display-width*)
+                           :element-type 'bit)))
         )
       (:img :src (format nil "data:image/png;base64,~S" ""))))))
+
+(uiop:define-package #:epap-routes)
   
+(defmacro expose-function (function-symbol)
+  (let ((function-name (symbol-name function-symbol)))
+    `(define-easy-handler
+         (,(intern function-name (find-package :epap-routes))
+          :uri ,(format nil "/epap/~a" function-name))
+         ()
+       (epap::for-real
+         (,function-symbol)
+         ,(format nil "~a~%" function-symbol)))))
+
+(expose-function epap::start-display)
+(expose-function epap::initialize-blank-display)
+(expose-function epap::enter-sleep-mode)
+
+(defun display-image ()
+  (epap::display-image (png:decode (raw-post-data))))
+
+(expose-function display-image)

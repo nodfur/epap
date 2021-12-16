@@ -62,12 +62,19 @@
         :defaults pathname)))))
 
 (defun call-with-latex-to-pdf (f)
-  (let ((pathname (into-temporary-file f)))
+    (let ((pathname (into-temporary-file f)))
     (cd pathname
       ($ "pdflatex" pathname)
       (make-pathname
        :type "pdf"
        :defaults pathname))))
+
+(defun call-with-latex-to-pngs (f)
+  (let ((pathname (into-temporary-file f)))
+    (cd pathname
+      ($ "latex" pathname)
+      ($ "dvipng" "-D" "226.785" (pathname-name pathname)))
+    pathname))
 
 (defmacro wrap-latex (&body body)
   `(progn 
@@ -90,7 +97,7 @@
       (loop for y from 0 below (min *display-height* height)
             do (loop for x from 0 below (min *display-width* width)
                      do (setf (sbit *local-framebuffer* y x)
-                              (if (< (aref image y x 0) 240) 1 0))))
+                              (if (< (aref image y x 0) 200) 1 0))))
       (write-whole-framebuffer)
       (refresh))))
 
@@ -136,10 +143,11 @@
   (wrap-latex
     (format t "~{\\hspace{0pt}\\vfill{\\LARGE ~a}~%\\vfill\\hspace{0pt}\\newpage~%~}" *meekaale-aquinas*)))
 
-(mv (call-with-latex-to-pdf #'format-aquinas) "tmp/meekaale.pdf")
+(defun latex-fun ()
+  (mv (call-with-latex-to-pdf #'format-aquinas) "tmp/meekaale.pdf")
 
-(save-latex "tmp/alexander.png"
-  (format t "
+  (save-latex "tmp/alexander.png"
+              (format t "
 \\section*{the family}
 
 \\textbf{The nuclear family is not by itself a viable social form.}
@@ -208,7 +216,7 @@ everyone would tend to meet toward the end of the day. Again,
 according to the style of the family, this might be a separate
 building, with workshop and gardens, or one wing of a house, or the
 entire first floor of a two or three story building.
-"))
+")))
 
 
 (defun babble-2 (prompt)

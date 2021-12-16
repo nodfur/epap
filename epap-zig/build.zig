@@ -40,10 +40,9 @@ pub fn build(b: *std.build.Builder) void {
     epapi.addIncludeDir("../vendor/harfbuzz/src");
 
     if (target.isLinux()) {
-        epapi.linkSystemLibrary("cap");
         epapi.addCSourceFile(
             "../vendor/bcm2835-1.70/src/bcm2835.c",
-            &.{ "-fno-sanitize=undefined", "-DBCM2835_HAVE_LIBCAP" },
+            &.{"-fno-sanitize=undefined"},
         );
     }
 

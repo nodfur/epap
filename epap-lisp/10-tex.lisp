@@ -20,12 +20,13 @@
 
 (defun latex-preamble ()
   (format t "
-\\documentclass[10pt,twocolumn]{extarticle}
+\\documentclass[10pt]{extarticle}
 \\usepackage[
   paperwidth=209.66mm,paperheight=157.25mm,
   margin=0.8cm,includefoot]{geometry}
 \\usepackage[
   width=209.66mm,height=157.25mm,center,frame,noinfo]{crop}
+\\usepackage{parskip}
 \\usepackage{ebgaramond}
 \\usepackage[sc]{titlesec}
 \\begin{document}
@@ -35,24 +36,44 @@
   (format t "
 \\end{document}"))
 
-(defun call-with-latex-to-png (f)
+(defun into-temporary-file (f)
   (uiop:with-temporary-file (:stream stream :pathname pathname
-                             :prefix "epap" :type "tex")
+                             :prefix "epap" :type "tex" :keep t)
     (let ((*standard-output* stream))
       (funcall f))
-    :close-stream
-    (let ((basename (pathname-name pathname)))
-      (uiop:with-current-directory ((uiop:pathname-directory-pathname pathname))
-        (uiop:run-program (list "latex" basename)
-                          :output :interactive)
-        (uiop:run-program (list "dvipng" "-D" "226.785" basename)
-                          :output :interactive)
-        (uiop:run-program "ls" :output :interactive)
-        (png:decode-file
-         (make-pathname
-          :name (format nil "~A1" basename)
-          :type "png"
-          :defaults pathname))))))
+    :close-stream pathname))
+
+(defun $ (&rest command)
+  (uiop:run-program
+   (mapcar #'namestring command) :output :interactive))
+
+(defmacro cd (directory &body body)
+  `(uiop:with-current-directory (,directory) ,@body))
+
+(defun call-with-latex-to-png (f)
+  (let ((pathname (into-temporary-file f)))
+    (cd pathname
+      ($ "latex" pathname)
+      ($ "dvipng" "-D" "226.785" (pathname-name pathname))
+      (png:decode-file
+       (make-pathname
+        :name (format nil "~A1" (pathname-name pathname))
+        :type "png"
+        :defaults pathname)))))
+
+(defun call-with-latex-to-pdf (f)
+  (let ((pathname (into-temporary-file f)))
+    (cd pathname
+      ($ "pdflatex" pathname)
+      (make-pathname
+       :type "pdf"
+       :defaults pathname))))
+
+(defmacro wrap-latex (&body body)
+  `(progn 
+     (latex-preamble)
+     (prog1 (progn ,@body)
+       (latex-postamble))))
 
 (defmacro latex-png (&body body)
   `(call-with-latex-to-png (lambda ()
@@ -107,6 +128,15 @@
 
 (defmacro save-latex (path &body document)
   `(save-image ,path (latex-png ,@document)))
+
+(defun mv (a b)
+  ($ "mv" a b))
+
+(defun format-aquinas ()
+  (wrap-latex
+    (format t "~{\\hspace{0pt}\\vfill{\\LARGE ~a}~%\\vfill\\hspace{0pt}\\newpage~%~}" *meekaale-aquinas*)))
+
+(mv (call-with-latex-to-pdf #'format-aquinas) "tmp/meekaale.pdf")
 
 (save-latex "tmp/alexander.png"
   (format t "

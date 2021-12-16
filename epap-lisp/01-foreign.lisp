@@ -32,7 +32,7 @@
 ;; (use-foreign-library harfbuzz)
 
 (define-foreign-library epap-zig
-  (:unix (:or "libharfbuzz.so"
+  (:unix (:or "./epap-zig/zig-out/lib/libepapi.so"
               "./epap-zig/zig-out/lib/libepapi-text.dylib")))
 
 (use-foreign-library epap-zig)

@@ -337,9 +337,9 @@ Stallī bērus kumeliņus")
 
 "That was fascinating in itself because I thought virtue ethics and disability was a rather obscure intersection of interests but then I realize it’s actually at the center of the whole story of Christianity."
 
-"Aristotelian virtue ethical teaching starts with the assumption of a healthy & well-raised property-owning male free citizen of the Athenian polis, and provides him with a framework for understanding and further developing his practical skills and virtuous friendships."
+"Aristotelian virtue ethical teaching starts with the assumption of a healthy \\& well-raised property-owning male free citizen of the Athenian polis, and provides him with a framework for understanding and further developing his practical skills and virtuous friendships."
 
-"Sick and disabled people, along with women and slaves, are more or less scoped out of relevance to this style of training in excellence. Jesus comes along and specifically preaches God’s love for the sick & disabled, for women & slaves."
+"Sick and disabled people, along with women and slaves, are more or less scoped out of relevance to this style of training in excellence. Jesus comes along and specifically preaches God’s love for the sick \\& disabled, for women \\& slaves."
 
 "The Christians proclaim a gospel where the most important kind of happiness, and indeed salvation, doesn’t depend upon the virtues glorified by the Greco-Roman culture; it’s universal in the sense that its fruits aren’t contingent on bodily strength or virtuous excellence."
 

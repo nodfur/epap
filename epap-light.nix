@@ -6,7 +6,10 @@
   libpng,
 
   sbcl,
-  zig
+  zig,
+
+  nodfur-emacs,   # our own Emacs configuration
+  nodfur-emacs-packages,
 }:
 
 stdenv.mkDerivation {
@@ -19,7 +22,10 @@ stdenv.mkDerivation {
     libpng
     sbcl
     zig
+    nodfur-emacs
   ];
+
+  EMACS_SITE_LISP = "${nodfur-emacs-packages.slime}/share/emacs/site-lisp";
 
   preBuild = ''
     export HOME=$TMPDIR

@@ -22,7 +22,12 @@
           ;
         };
 
-        packages.epap-light = pkgs.callPackage ./epap-light.nix {};
+        packages.epap-light = pkgs.callPackage ./epap-light.nix {
+          inherit (nodfur-packages)
+            nodfur-emacs
+            nodfur-emacs-packages
+          ;
+        };
 
         devShell = packages.epap;
         devShells.epap-light = packages.epap-light;

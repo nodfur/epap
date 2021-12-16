@@ -22,7 +22,10 @@
           ;
         };
 
+        packages.epap-light = pkgs.callPackage ./epap-light.nix {};
+
         devShell = packages.epap;
+        devShells.epap-light = packages.epap-light;
       }
     );
 }

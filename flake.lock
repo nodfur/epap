@@ -272,11 +272,11 @@
         "waveshare-epaper-demo-src": "waveshare-epaper-demo-src"
       },
       "locked": {
-        "lastModified": 1639306291,
-        "narHash": "sha256-zjq2wX/UQN2pp/BNNcBUWpslGfpe9j9xTclxeXb4LPI=",
+        "lastModified": 1640118742,
+        "narHash": "sha256-Fk8SA3li+/adVYlsArBCkLYHzKD+4A4CNHRLYuDxjEc=",
         "owner": "nodfur",
         "repo": "os",
-        "rev": "8f6b12e832a6310ff67bf9f89b38a9751e8a81f9",
+        "rev": "bb8e981158af4e9530b790dd330e33dcb4e49cb8",
         "type": "github"
       },
       "original": {

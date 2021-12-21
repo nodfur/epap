@@ -37,7 +37,12 @@ in stdenv.mkDerivation {
     pstree
 
     sbcl
-    texlive.combined.scheme-full
+
+    (texlive.combine {
+      inherit (texlive)
+        scheme-basic
+        ebgaramond
+      ;})
 
     restless-git
     nodfur-emacs

@@ -195,7 +195,7 @@
 
 ;; (draw-letter #\y (* 16 9) (+ 1024 128))
 
-(change-font :concrete-roman 64)
+;; (change-font :concrete-roman 64)
 
 (defun poem (dx dy text)
   (loop
@@ -210,7 +210,8 @@
                 (copy-bitmap-area-to-framebuffer bitmap x y)
                 (when *live-update*
                   (display-bitmap-area bitmap x y)))))
-       (delay-milliseconds 500)
+       (when *live-update*
+         (delay-milliseconds 500))
        (incf dy (round (* 1.5 (font-height *current-font*)))))
 
   (unless *live-update*

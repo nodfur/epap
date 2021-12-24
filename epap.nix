@@ -10,6 +10,8 @@
   bashInteractive,
   coreutils,
   pstree,
+  rlwrap,
+  gdb,
 
   restless-git,   # the `git save' command
 
@@ -35,6 +37,8 @@ in stdenv.mkDerivation {
     bashInteractive
     coreutils
     pstree
+    rlwrap
+    gdb
 
     sbcl
 
@@ -42,6 +46,15 @@ in stdenv.mkDerivation {
       inherit (texlive)
         scheme-basic
         ebgaramond
+        etoolbox
+        extsizes
+        parskip
+        geometry
+        crop
+        titlesec
+        xkeyval
+        fontaxes
+        dvipng
       ;})
 
     restless-git

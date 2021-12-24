@@ -23,7 +23,10 @@
 (defparameter *font-table*
   '(:cozette "fonts/cozette.bdf"
     :dm-mono "fonts/DMMono-Regular.ttf"
-    :concrete-roman "fonts/computer-modern/cmunorm.otf"))
+    :concrete-roman "fonts/computer-modern/cmunorm.otf"
+    :fantasque "fonts/FantasqueSansMono-Regular.otf"
+    :fantasque-bold "fonts/FantasqueSansMono-Bold.otf"
+    ))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

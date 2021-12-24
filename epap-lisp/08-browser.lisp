@@ -22,7 +22,16 @@
 (in-package #:epap-web)
 
 (defun web-app () 
-  (start (make-instance 'easy-acceptor :port 4242)))
+  (start (make-instance 'easy-acceptor :port 80)))
+
+(define-easy-handler (epap-root :uri "/") ()
+  (with-html-string
+    (:html 
+     (:head (:title "Urbion"))
+     (:body
+      (:ul
+       (:li (:a :href "/epap/COLD-MOUNTAIN" "Songs from Cold Mountain"))
+       (:li (:a :href "/epap/SHUT-DOWN" "Shut down")))))))
 
 (define-easy-handler (epap :uri "/epap") ()
   (with-html-string
@@ -53,6 +62,8 @@
 (expose-function epap::start-display)
 (expose-function epap::initialize-blank-display)
 (expose-function epap::enter-sleep-mode)
+(expose-function epap::shut-down)
+(expose-function epap::cold-mountain)
 
 (setf *catch-errors-p* nil)
 

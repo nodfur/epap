@@ -49,6 +49,10 @@
     (dotimes (x *display-width* nil)
       (setf (sbit *local-framebuffer* y x) 0))))
 
+(defun clear-local-area (x y w h)
+  (dotimes (i h nil)
+    (dotimes (j w nil)
+      (setf (sbit *local-framebuffer* (+ y i) (+ x j)) 0))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Low-level protocol stuff for the IT8591 controller.
@@ -301,9 +305,10 @@
     (prog1 info
       (setf *display-width* (system-info-width info)
             *display-height* (system-info-height info)
-            *local-framebuffer* (make-array
-                                 (list *display-height* *display-width*)
-                                 :element-type 'bit)
+            *local-framebuffer* (or *local-framebuffer*
+                                    (make-array
+                                     (list *display-height* *display-width*)
+                                     :element-type 'bit))
             *framebuffer-address* (system-info-address info)))))
 
 (defun stop-display ()

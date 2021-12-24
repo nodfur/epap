@@ -20,7 +20,7 @@
 
 (defun latex-preamble ()
   (format t "
-\\documentclass[10pt]{extarticle}
+\\documentclass[12pt]{extarticle}
 \\usepackage[
   paperwidth=209.66mm,paperheight=157.25mm,
   margin=0.8cm,includefoot]{geometry}
@@ -46,6 +46,10 @@
 (defun $ (&rest command)
   (uiop:run-program
    (mapcar #'namestring command) :output :interactive))
+
+(defun $$ (&rest command)
+  (uiop:run-program
+   (mapcar #'namestring command) :output '(:string :stripped t)))
 
 (defmacro cd (directory &body body)
   `(uiop:with-current-directory (,directory) ,@body))

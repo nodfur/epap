@@ -7,13 +7,6 @@
 
 (swank-loader:init)
 
-(defun start-swank ()
-  (swank:create-server
-   :interface "0.0.0.0"
-   :port 4005
-   :style :spawn
-   :dont-close t))
-
 (ql:quickload '(:cffi :cffi-toolchain :cl-ppcre))
 
 (defun run-pkg-config (name command)
@@ -71,4 +64,13 @@
   (in-package :cl-user)
   (asdf:make "epap"))
 
-(epap::web-app)
+;; (epap-web::web-app)
+
+(defun start-swank ()
+  (swank:create-server
+   :interface "0.0.0.0"
+   :port 4005
+   :style :spawn
+   :dont-close t))
+
+;; (start-swank)

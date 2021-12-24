@@ -300,7 +300,7 @@ Stallī bērus kumeliņus")
                       (live-poetry 200 300 verse)
                       (incf i)
                       (initialize-blank-display))))
-      (goodnight))))
+      (lets-roll))))
 
 ; (zpng:write-png (canvas-to-png *local-framebuffer*) "frame.png")
 

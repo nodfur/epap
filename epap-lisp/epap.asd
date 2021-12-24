@@ -41,5 +41,7 @@
                (:file "08-browser")
                (:file "09-openai")
                (:file "10-tex")
+               (:file "11-urbion")
                ;; (:file "99-chronicle")
-               ))
+               )
+  )

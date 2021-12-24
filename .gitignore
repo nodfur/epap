@@ -4,3 +4,4 @@
 tmp/*.*
 **/zig-out
 **/zig-cache
+epap-boot

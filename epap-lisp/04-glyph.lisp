@@ -276,7 +276,12 @@
 
 ;; (setf *freetype* (initialize-freetype))
 
+(defun ensure-freetype ()
+  (unless *freetype*
+    (setf *freetype* (initialize-freetype))))
+
 (defun load-freetype-font (path height)
+  (ensure-freetype)
   (printv:printv
    *freetype* path height)
   (let ((face-ptr (foreign-alloc :pointer)))

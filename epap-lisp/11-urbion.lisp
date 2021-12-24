@@ -21,11 +21,15 @@
 (defun blank ()
   (initialize-blank-display))
 
+(defun reset () (blank) (write-whole-framebuffer))
+
 (defun paper-lisp-logo ()
   (with-font :dm-mono 128
     (live-poetry 520 520 "Paper Lisp"))
   (with-font :concrete-roman 64
-    (live-poetry 540 670 "Restless Hypermedia, Inc.")))
+    (live-poetry 540 670 "Restless Hypermedia"))
+  (with-font :dm-mono 42
+    (live-poetry 480 900 "Tailscale online.  Lisp is waiting.")))
 
 (defun shut-down ()
   (lets-sleep)
@@ -35,23 +39,23 @@
 
 (defun lets-sleep ()
   (start-display)
-  (blank)
-  (write-whole-framebuffer)
-  ; (paper-lisp-logo)
-  (with-font :dm-mono 36
-    (with-live-update nil
-      (poem 630 500 "Plug in the power to start.")))
-  (enter-sleep-mode))
+  (progn
+    (blank)
+    (write-whole-framebuffer)
+    (with-font :concrete-roman 128
+      (poem 300 500 "Vilken konstig maskin."))
+    (with-font :concrete-roman 92
+      (poem 450 790 "Undrar vad den gör?")))
+  (stop-display))
 
 (defun lets-roll ()
   (start-display)
-  (blank)
-  (write-whole-framebuffer)
+  (reset)
   (paper-lisp-logo)
-  (if *minute-timer*
-      (sb-ext:unschedule-timer *minute-timer*)
-      (setf *minute-timer* (sb-ext:make-timer #'update-clock)))
-  (sb-ext:schedule-timer *minute-timer* 0 :repeat-interval 60)
+  ;; (if *minute-timer*
+  ;;     (sb-ext:unschedule-timer *minute-timer*)
+  ;;     (setf *minute-timer* (sb-ext:make-timer #'update-clock)))
+  ;; (sb-ext:schedule-timer *minute-timer* 0 :repeat-interval 60)
   (enter-sleep-mode))
 
 (defun update-clock ()
@@ -80,7 +84,7 @@
             ($$ "ping" "-nc" "4" "google.com")))))
 
 (defun boot ()
-  (setf *freetype* (initialize-freetype))
+  (setf *freetype* nil)
   (setf *dry-run* nil)
   (start-display)
   (progn
@@ -89,8 +93,20 @@
     (with-font :concrete-roman 128
       (poem 600 500 "Hello, world!"))
     (with-font :dm-mono 48
-      (poem 650 700 "Lisp system booting...")))
+      (poem 640 700 "Connecting to Wi-Fi...")))
   (stop-display))
 
 (defun save-boot-program ()
   (sb-ext:save-lisp-and-die "epap-boot" :toplevel #'boot :executable t))
+
+(defun save-core ()
+  (setf *freetype* nil)
+  (sb-ext:save-lisp-and-die "epap-core"))
+
+(defun hmm (prompt)
+  (with-font :concrete-roman 48
+    (live-poetry
+     40 40
+     (concatenate
+      'string prompt
+      (openai:completions :prompt prompt :max-tokens 40)))))

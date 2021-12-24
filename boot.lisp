@@ -74,3 +74,7 @@
    :dont-close t))
 
 ;; (start-swank)
+
+(defun foobar ()
+  (epap-web::web-app)
+  (start-swank))

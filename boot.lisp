@@ -54,6 +54,9 @@
    #:css-lite                           ; CSS with S-expressions
    #:parenscript                        ; JavaScript with Lisp syntax
 
+   #:clack                              ; Web server abstraction
+   #:websocket-driver                   ; WebSocket serving
+
    #:png                                ; read & write PNG files
    #:zpng                               ; Lisp-native PNG library
    ))

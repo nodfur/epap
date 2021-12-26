@@ -3,6 +3,7 @@
   writeText,
   writeShellScriptBin,
 
+  zig,
   pkg-config,
   openssl,
   libpng,
@@ -14,14 +15,11 @@
   gdb,
 
   restless-git,   # the `git save' command
-
   nodfur-emacs,   # our own Emacs configuration
   nodfur-emacs-packages,
 
-  sbcl,           # Steel Bank Common Lisp
-  texlive,        # TeX, LaTeX, XeTeX, etc
-  freetype,       # for loading and rendering fonts
-  harfbuzz        # for shaping text words
+  sbcl,
+  texlive
 }:
 
 let
@@ -61,13 +59,10 @@ in stdenv.mkDerivation {
     nodfur-emacs
     epap-emacs
 
+    zig
     pkg-config
     openssl
     libpng
-
-    # freetype
-    # harfbuzz
-
   ];
 
   EMACS_SITE_LISP = "${nodfur-emacs-packages.slime}/share/emacs/site-lisp";
@@ -77,6 +72,7 @@ in stdenv.mkDerivation {
   '';
 
   installPhase = ''
-    # zig build --prefix $out install
+    cd epap-zig
+    zig build --prefix $out install
   '';
 }

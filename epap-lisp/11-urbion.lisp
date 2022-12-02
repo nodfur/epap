@@ -27,7 +27,7 @@
   (with-font :dm-mono 128
     (live-poetry 520 520 "Paper Lisp"))
   (with-font :concrete-roman 64
-    (live-poetry 540 670 "Restless Hypermedia"))
+    (live-poetry 540 670 "Restless Hypermedia, Inc."))
   (with-font :dm-mono 42
     (live-poetry 480 900 "Tailscale online.  Lisp is waiting.")))
 

@@ -20,7 +20,7 @@
 
 (defun latex-preamble ()
   (format t "
-\\documentclass[12pt]{extarticle}
+\\documentclass[14pt,twocolumn]{extarticle}
 \\usepackage[
   paperwidth=209.66mm,paperheight=157.25mm,
   margin=0.8cm,includefoot]{geometry}
@@ -101,7 +101,7 @@
       (loop for y from 0 below (min *display-height* height)
             do (loop for x from 0 below (min *display-width* width)
                      do (setf (sbit *local-framebuffer* y x)
-                              (if (< (aref image y x 0) 200) 1 0))))
+                              (if (< (aref image y x 0) 240) 1 0))))
       (write-whole-framebuffer)
       (refresh))))
 
@@ -111,12 +111,7 @@
      (initialize-blank-display)
      (unwind-protect (progn ,@body)
        (format t "epap: putting display to sleep~%")
-       (goodnight))))
-
-(defun latex-demo ()
-  (with-display
-    (display-image (latex-png (format t "Hello, world!")))
-    (sleep 5)))
+       (enter-sleep-mode))))
 
 (defun save-image (path image)
   (with-open-file (output path :element-type '(unsigned-byte 8)
@@ -147,11 +142,8 @@
   (wrap-latex
     (format t "~{\\hspace{0pt}\\vfill{\\LARGE ~a}~%\\vfill\\hspace{0pt}\\newpage~%~}" *meekaale-aquinas*)))
 
-(defun latex-fun ()
-  (mv (call-with-latex-to-pdf #'format-aquinas) "tmp/meekaale.pdf")
-
-  (save-latex "tmp/alexander.png"
-              (format t "
+(defparameter *christopher-alexander*
+  "
 \\section*{the family}
 
 \\textbf{The nuclear family is not by itself a viable social form.}
@@ -220,8 +212,12 @@ everyone would tend to meet toward the end of the day. Again,
 according to the style of the family, this might be a separate
 building, with workshop and gardens, or one wing of a house, or the
 entire first floor of a two or three story building.
-")))
+")
 
+(defun latex-demo ()
+  (with-display
+    (display-image (latex-png (format t *christopher-alexander*)))
+    ))
 
 (defun babble-2 (prompt)
   (with-display
@@ -229,7 +225,7 @@ entire first floor of a two or three story building.
       do
          (display-latex
            (format t "\\textsl{~a} ~a"
-                   prompt (openai:completions prompt :tokens 200)))
+                   prompt (openai:completions :prompt prompt :max-tokens 200)))
       until (not (swank:y-or-n-p-in-emacs "Continue?")))))
 
 (defun babble ()
